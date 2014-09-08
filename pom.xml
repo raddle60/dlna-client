@@ -36,7 +36,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.raddle.comic.swing.ComicViewer</mainClass>
+							<mainClass>com.raddle.dlna.swing.DlnaClientSwing</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
