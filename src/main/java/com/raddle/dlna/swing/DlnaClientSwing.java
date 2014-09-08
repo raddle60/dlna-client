@@ -546,9 +546,11 @@ public class DlnaClientSwing {
 									VideoInfo videoInfo = selectedParser.fetchVideoUrls(urlText, selectedParser
 											.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
 									urlParseTime = new Date();
+									List<PlayListItem> newPlayList = new ArrayList<PlayListItem>();
 									for (String url : videoInfo.getUrls()) {
-										playList.add(new PlayListItem(videoInfo, url));
+										newPlayList.add(new PlayListItem(videoInfo, url));
 									}
+									playList = newPlayList;
 								} catch (Exception e1) {
 									logger.error(e1.getMessage(), e1);
 									return;
@@ -579,6 +581,8 @@ public class DlnaClientSwing {
 				frame.setTitle(playList.get(curVideoIndex).getVideoInfo().getName() + " - " + (curVideoIndex + 1) + "/"
 						+ playList.size());
 				ActionHelper actionHelper = new ActionHelper(selectedDevice);
+				// 先暂停，如果在播放过程中，直接切换，播放器会出问题
+				actionHelper.pause();
 				actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
 				paused = false;
 				hasPlaying = false;
