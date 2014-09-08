@@ -17,6 +17,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,6 +36,7 @@ import javax.swing.UIManager;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.cybergarage.upnp.Argument;
 import org.cybergarage.upnp.ArgumentList;
 import org.cybergarage.upnp.ControlPoint;
@@ -72,6 +74,7 @@ public class DlnaClientSwing {
 	private int curMousePos = 0;
 	private int quickSyncCount = 0;
 	private boolean hasPlaying = false;
+	private Date urlParseTime = null;
 	/**
 	 * 是否在拖动进度条
 	 */
@@ -192,10 +195,12 @@ public class DlnaClientSwing {
 				}
 				playList = new ArrayList<PlayListItem>();
 				VideoInfo videoInfo = null;
+				urlParseTime = null;
 				if (urlText.toLowerCase().endsWith(".htm") || urlText.toLowerCase().endsWith(".html")) {
 					try {
 						videoInfo = selectedParser.fetchVideoUrls(urlText,
 								selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
+						urlParseTime = new Date();
 					} catch (Exception e1) {
 						logger.error(e1.getMessage(), e1);
 						JOptionPane.showMessageDialog(frame, "转换视频地址异常，" + e1.getMessage());
@@ -543,6 +548,32 @@ public class DlnaClientSwing {
 						}
 					}
 				}, 5, 1, TimeUnit.SECONDS);
+				// 启动刷新url，视频网站url都有有效期的
+				scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
+
+					@Override
+					public void run() {
+						if (stopBtn.isEnabled() && progressSlid.isEnabled() && hasPlaying && urlParseTime != null
+								&& playList != null && playList.size() > 0) {
+							// 已过15分钟，重新获取url
+							if (DateUtils.addMinutes(urlParseTime, 15).before(new Date())) {
+								try {
+									VideoUrlParser selectedParser = getSelectedParser();
+									String urlText = urlTxt.getText().trim();
+									VideoInfo videoInfo = selectedParser.fetchVideoUrls(urlText, selectedParser
+											.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
+									urlParseTime = new Date();
+									for (String url : videoInfo.getUrls()) {
+										playList.add(new PlayListItem(videoInfo, url));
+									}
+								} catch (Exception e1) {
+									logger.error(e1.getMessage(), e1);
+									return;
+								}
+							}
+						}
+					}
+				}, 5, 60, TimeUnit.SECONDS);
 			}
 		}.start();
 	}

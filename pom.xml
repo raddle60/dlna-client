@@ -6,6 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
 		<cyberlink.version>2.1.0</cyberlink.version>
+		<jettyVersion>9.2.2.v20140723</jettyVersion>
 	</properties>
 	<build>
 		<defaultGoal>package</defaultGoal>
@@ -71,6 +72,11 @@
 			<groupId>org.mozilla</groupId>
 			<artifactId>rhino</artifactId>
 			<version>1.7R4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+			<version>${jettyVersion}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
