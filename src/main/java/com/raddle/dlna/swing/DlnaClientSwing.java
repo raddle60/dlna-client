@@ -108,6 +108,7 @@ public class DlnaClientSwing {
 	private JLabel lblip;
 	private JComboBox localIpComb;
 	private JButton playBtn2;
+	private JButton stopBtn2;
 
 	/**
 	 * Launch the application.
@@ -281,19 +282,10 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(pauseBtn);
 
 		stopBtn = new JButton("停止");
+		stopBtn.setEnabled(false);
 		stopBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Device selectedDevice = getSelectedDevice();
-				if (selectedDevice != null) {
-					ActionHelper actionHelper = new ActionHelper(selectedDevice);
-					// 先暂停，再退出。可以增加退出速度
-					actionHelper.pause();
-					actionHelper.stop();
-					curVideoIndex = 0;
-					playList = null;
-					stopBtn.setEnabled(false);
-					progressSlid.setEnabled(false);
-				}
+				stopBtnAction();
 			}
 		});
 		stopBtn.setBounds(316, 181, 61, 23);
@@ -421,6 +413,16 @@ public class DlnaClientSwing {
 		playBtn2.setBounds(534, 62, 61, 23);
 		frame.getContentPane().add(playBtn2);
 
+		stopBtn2 = new JButton("停止");
+		stopBtn2.setEnabled(false);
+		stopBtn2.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				stopBtnAction();
+			}
+		});
+		stopBtn2.setBounds(598, 62, 61, 23);
+		frame.getContentPane().add(stopBtn2);
+
 		///
 		updateUrlParsers();
 		///
@@ -487,7 +489,9 @@ public class DlnaClientSwing {
 										showCurrentPos();
 										// 自动播放下一个
 										if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
-												.getMaximum()) && curVideoIndex < playList.size() - 1 && hasPlaying) {
+												.getMaximum())
+												&& playList != null
+												&& curVideoIndex < playList.size() - 1 && hasPlaying) {
 											play(curVideoIndex + 1);
 										}
 									}
@@ -516,7 +520,10 @@ public class DlnaClientSwing {
 									showCurrentPos();
 									// 自动播放下一个
 									if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
-											.getMaximum()) && curVideoIndex < playList.size() - 1 && hasPlaying) {
+											.getMaximum())
+											&& playList != null
+											&& curVideoIndex < playList.size() - 1
+											&& hasPlaying) {
 										play(curVideoIndex + 1);
 									}
 								}
@@ -576,6 +583,7 @@ public class DlnaClientSwing {
 				paused = false;
 				hasPlaying = false;
 				stopBtn.setEnabled(true);
+				stopBtn2.setEnabled(true);
 				progressSlid.setEnabled(false);
 				if (curVideoIndex < playList.size() - 1) {
 					actionHelper.setNextVideoUrl(playList.get(curVideoIndex + 1).getVideoUrl());
@@ -829,6 +837,25 @@ public class DlnaClientSwing {
 			logger.error("videoInfo is null");
 			JOptionPane.showMessageDialog(frame, "转换视频地址失败");
 			return;
+		}
+	}
+
+	private void stopBtnAction() {
+		Device selectedDevice = getSelectedDevice();
+		if (selectedDevice != null) {
+			ActionHelper actionHelper = new ActionHelper(selectedDevice);
+			// 先暂停，再退出。可以增加退出速度
+			actionHelper.pause();
+			actionHelper.stop();
+			curVideoIndex = 0;
+			playList = null;
+			stopBtn.setEnabled(false);
+			stopBtn2.setEnabled(false);
+			progressSlid.setEnabled(false);
+			progressSlid.setValue(0);
+			progressSlid.setMaximum(0);
+			durationLeb.setText("");
+			curDurationLeb.setText("");
 		}
 	}
 }
