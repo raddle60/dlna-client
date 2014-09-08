@@ -523,7 +523,7 @@ public class DlnaClientSwing {
 											&& curVideoIndex < playList.size() - 1) {
 										// 快接近尾部了，需要自动播放下一个
 										// 为了防止服务端拖动，增加同步频率
-										quickSyncCount = 1;
+										quickSyncCount = 10;
 									}
 									showCurrentPos();
 								}
@@ -714,7 +714,9 @@ public class DlnaClientSwing {
 								if (absTimeDuration != null && StringUtils.isNotEmpty(absTimeDuration.getValue())) {
 									int seconds = DurationUtils.parseTrackNRFormat(absTimeDuration.getValue());
 									// 1秒以上的误差才同步
-									if (Math.abs(progressSlid.getValue() - (seconds + delay)) > 1) {
+									if (seconds == 0) {
+										progressSlid.setValue(seconds);
+									} else if (Math.abs(progressSlid.getValue() - (seconds + delay)) > 1) {
 										progressSlid.setValue(seconds + delay);
 									}
 								}
