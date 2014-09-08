@@ -492,6 +492,14 @@ public class DlnaClientSwing {
 												.getMaximum())
 												&& playList != null
 												&& curVideoIndex < playList.size() - 1 && hasPlaying) {
+											if (progressSlid.getValue() >= progressSlid.getMaximum()) {
+												try {
+													// 可能刚刚到最后一秒的开始
+													Thread.sleep(500);
+												} catch (InterruptedException e) {
+													return;
+												}
+											}
 											play(curVideoIndex + 1);
 										}
 									}
@@ -518,14 +526,6 @@ public class DlnaClientSwing {
 										quickSyncCount = 1;
 									}
 									showCurrentPos();
-									// 自动播放下一个
-									if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
-											.getMaximum())
-											&& playList != null
-											&& curVideoIndex < playList.size() - 1
-											&& hasPlaying) {
-										play(curVideoIndex + 1);
-									}
 								}
 							});
 						}
