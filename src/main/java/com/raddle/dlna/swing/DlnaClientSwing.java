@@ -582,7 +582,10 @@ public class DlnaClientSwing {
 						+ playList.size());
 				ActionHelper actionHelper = new ActionHelper(selectedDevice);
 				// 先暂停，如果在播放过程中，直接切换，播放器会出问题
-				actionHelper.pause();
+				try {
+					actionHelper.pause();
+				} catch (Exception e) {
+				}
 				actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
 				paused = false;
 				hasPlaying = false;
@@ -851,7 +854,10 @@ public class DlnaClientSwing {
 		if (selectedDevice != null) {
 			ActionHelper actionHelper = new ActionHelper(selectedDevice);
 			// 先暂停，再退出。可以增加退出速度
-			actionHelper.pause();
+			try {
+				actionHelper.pause();
+			} catch (Exception e) {
+			}
 			actionHelper.stop();
 			curVideoIndex = 0;
 			playList = null;
