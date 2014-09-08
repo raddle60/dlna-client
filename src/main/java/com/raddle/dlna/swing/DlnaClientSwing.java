@@ -592,10 +592,44 @@ public class DlnaClientSwing {
 				stopBtn.setEnabled(true);
 				stopBtn2.setEnabled(true);
 				progressSlid.setEnabled(false);
+				progressSlid.setMaximum(0);
+				progressSlid.setMinimum(0);
+				progressSlid.setValue(0);
 				if (curVideoIndex < playList.size() - 1) {
 					actionHelper.setNextVideoUrl(playList.get(curVideoIndex + 1).getVideoUrl());
 				}
 				quickSyncCount = 5;
+				syncPositionInfo();
+				// 确保播放，有时候调用了，播放器没启动
+				new Thread() {
+					@Override
+					public void run() {
+						for (int j = 0; j < 20; j++) {
+							if (playList != null && playList.size() > curVideoIndex && j % 5 == 0
+									&& (!progressSlid.isEnabled() || progressSlid.getValue() == 0)) {
+								Device selectedDevice = getSelectedDevice();
+								if (selectedDevice != null) {
+									ActionHelper actionHelper = new ActionHelper(selectedDevice);
+									try {
+										actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
+									} catch (Exception e) {
+									}
+									quickSyncCount = 5;
+									syncPositionInfo();
+								} else {
+									return;
+								}
+							} else {
+								return;
+							}
+							try {
+								Thread.sleep(1000);
+							} catch (InterruptedException e) {
+								return;
+							}
+						}
+					}
+				}.start();
 			}
 		}
 	}
