@@ -519,7 +519,7 @@ public class DlnaClientSwing {
 								@Override
 								public void run() {
 									progressSlid.setValue(progressSlid.getValue() + 1);
-									if (progressSlid.getValue() > progressSlid.getMaximum() - 30
+									if (progressSlid.getValue() > progressSlid.getMaximum() - 30 && playList != null
 											&& curVideoIndex < playList.size() - 1) {
 										// 快接近尾部了，需要自动播放下一个
 										// 为了防止服务端拖动，增加同步频率
