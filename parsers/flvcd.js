@@ -39,6 +39,8 @@ function innerFetchVideoUrls(url,videoQuality){
     if(videoNameHidden != null && videoNameHidden.length > 0){
         var videoName = videoNameHidden[0].match(new RegExp("value=\"([^\"]+)\"/>"))[1];
         videoInfo.name = videoName;
+    } else {
+        videoInfo.name = "名称未知";
     }
     if(videoInfo.urls){
 	    for(var i=0; i < parserInfo.qualitys.length ; i++){
