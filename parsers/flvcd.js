@@ -41,6 +41,11 @@ function innerFetchVideoUrls(url,videoQuality){
         videoInfo.name = videoName;
     }
     if(videoInfo.urls){
+	    for(var i=0; i < parserInfo.qualitys.length ; i++){
+	        if(parserInfo.qualitys[i].key == videoQuality){
+	            videoInfo.qualityName = parserInfo.qualitys[i].value;
+	        }
+	    }
         return videoInfo;
     }
     return null;

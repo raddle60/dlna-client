@@ -5,10 +5,12 @@ package com.raddle.dlna.url.parser;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -111,6 +113,7 @@ public class VideoUrlParser {
 			if (result != null) {
 				VideoInfo videoInfo = new VideoInfo();
 				videoInfo.setName((String) result.get("name", topScope));
+				videoInfo.setQualityName((String) result.get("qualityName", topScope));
 				NativeArray urlsObject = (NativeArray) result.get("urls", topScope);
 				List<String> urls = new ArrayList<String>();
 				for (Object string : urlsObject) {
@@ -136,6 +139,14 @@ public class VideoUrlParser {
 			}
 		}
 		return null;
+	}
+
+	public static String toBase64String(String str, String charset) {
+		try {
+			return new String(Base64.encodeBase64(str.getBytes(charset), false), charset);
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
 	}
 
 	public String getName() {

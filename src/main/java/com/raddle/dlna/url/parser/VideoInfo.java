@@ -11,6 +11,7 @@ import java.util.List;
  */
 public class VideoInfo {
 	private String name;
+	private String qualityName;
 	private List<String> urls;
 
 	public String getName() {
@@ -27,5 +28,13 @@ public class VideoInfo {
 
 	public void setUrls(List<String> urls) {
 		this.urls = urls;
+	}
+
+	public String getQualityName() {
+		return qualityName;
+	}
+
+	public void setQualityName(String qualityName) {
+		this.qualityName = qualityName;
 	}
 }

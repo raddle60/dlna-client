@@ -8,6 +8,8 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -250,6 +252,17 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(label_2);
 
 		addrParseComb = new JComboBox();
+		addrParseComb.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (e.getStateChange() == ItemEvent.SELECTED) {
+					VideoUrlParser selectedParser = getSelectedParser();
+					qualityComb.removeAllItems();
+					for (KeyValue<String, String> keyValue : selectedParser.getVideoQualitys()) {
+						qualityComb.addItem(keyValue.getValue());
+					}
+				}
+			}
+		});
 		addrParseComb.setBounds(72, 35, 200, 21);
 		frame.getContentPane().add(addrParseComb);
 
@@ -578,7 +591,7 @@ public class DlnaClientSwing {
 				previousBtn.setEnabled(curVideoIndex > 0);
 				nextBtn.setEnabled(curVideoIndex < playList.size() - 1);
 				frame.setTitle(playList.get(curVideoIndex).getVideoInfo().getName() + " - " + (curVideoIndex + 1) + "/"
-						+ playList.size());
+						+ playList.size() + " - " + playList.get(curVideoIndex).getVideoInfo().getQualityName());
 				ActionHelper actionHelper = new ActionHelper(selectedDevice);
 				// 先暂停，如果在播放过程中，直接切换，播放器会出问题
 				try {
@@ -846,7 +859,7 @@ public class DlnaClientSwing {
 				JOptionPane.showMessageDialog(frame, "视频地址无法访问");
 				return;
 			}
-			if (urlText.toLowerCase().endsWith(".htm") || urlText.toLowerCase().endsWith(".html")) {
+			if (urlText.toLowerCase().substring(urlText.lastIndexOf('.')).indexOf("htm") != -1) {
 				try {
 					videoInfo = selectedParser.fetchVideoUrls(urlText,
 							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
@@ -859,6 +872,7 @@ public class DlnaClientSwing {
 			} else {
 				videoInfo = new VideoInfo();
 				videoInfo.setName(FilenameUtils.getBaseName(urlText));
+				videoInfo.setQualityName("视频链接");
 				videoInfo.setUrls(new ArrayList<String>());
 				videoInfo.getUrls().add(urlText);
 			}
@@ -871,6 +885,7 @@ public class DlnaClientSwing {
 			}
 			videoInfo = new VideoInfo();
 			videoInfo.setName(FilenameUtils.getBaseName(urlText));
+			videoInfo.setQualityName("本地视频");
 			videoInfo.setUrls(new ArrayList<String>());
 			String videoName = DigestUtils.shaHex(file.getAbsolutePath()) + "." + FilenameUtils.getExtension(urlText);
 			videoInfo.getUrls().add(
@@ -905,7 +920,7 @@ public class DlnaClientSwing {
 			} catch (Exception e) {
 			}
 			actionHelper.stop();
-			//curVideoIndex = 0;
+			curVideoIndex = 0;
 			playList = null;
 			stopBtn.setEnabled(false);
 			stopBtn2.setEnabled(false);
