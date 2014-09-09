@@ -81,7 +81,8 @@ public class DlnaClientSwing {
 	private int quickSyncCount = 0;
 	private boolean hasPlaying = false;
 	private Date urlParseTime = null;
-	private LocalFileHttpHandler localFileHttpHandler = new LocalFileHttpHandler();;
+	private LocalFileHttpHandler localFileHttpHandler = new LocalFileHttpHandler();
+	private String curUrl = null;
 	/**
 	 * 是否在拖动进度条
 	 */
@@ -483,25 +484,7 @@ public class DlnaClientSwing {
 
 									@Override
 									public void run() {
-										if (progressSlid.getValue() > 0) {
-											hasPlaying = true;
-										}
 										showCurrentPos();
-										// 自动播放下一个
-										if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
-												.getMaximum())
-												&& playList != null
-												&& curVideoIndex < playList.size() - 1 && hasPlaying) {
-											if (progressSlid.getValue() >= progressSlid.getMaximum()) {
-												try {
-													// 可能刚刚到最后一秒的开始
-													Thread.sleep(500);
-												} catch (InterruptedException e) {
-													return;
-												}
-											}
-											play(curVideoIndex + 1);
-										}
 									}
 								});
 							}
@@ -526,6 +509,22 @@ public class DlnaClientSwing {
 										quickSyncCount = 10;
 									}
 									showCurrentPos();
+									// 自动播放下一个
+									if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
+											.getMaximum())
+											&& playList != null
+											&& curVideoIndex < playList.size() - 1
+											&& hasPlaying) {
+										if (progressSlid.getValue() >= progressSlid.getMaximum()) {
+											try {
+												// 可能刚刚到最后一秒的开始
+												Thread.sleep(1000);
+											} catch (InterruptedException e) {
+												return;
+											}
+										}
+										play(curVideoIndex + 1);
+									}
 								}
 							});
 						}
@@ -604,14 +603,19 @@ public class DlnaClientSwing {
 				new Thread() {
 					@Override
 					public void run() {
+						try {
+							Thread.sleep(500);
+						} catch (InterruptedException e1) {
+							return;
+						}
 						for (int j = 0; j < 20; j++) {
-							if (playList != null && playList.size() > curVideoIndex && j % 5 == 0
+							if (playList != null && playList.size() > curVideoIndex && j % 3 == 0
 									&& (!progressSlid.isEnabled() || progressSlid.getValue() == 0)) {
 								Device selectedDevice = getSelectedDevice();
 								if (selectedDevice != null) {
 									ActionHelper actionHelper = new ActionHelper(selectedDevice);
 									try {
-										actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
+										actionHelper.resume();
 									} catch (Exception e) {
 									}
 									quickSyncCount = 5;
@@ -750,6 +754,9 @@ public class DlnaClientSwing {
 								Argument absTimeDuration = positionInfo.getArgument(AVTransport.ABSTIME);
 								if (absTimeDuration != null && StringUtils.isNotEmpty(absTimeDuration.getValue())) {
 									int seconds = DurationUtils.parseTrackNRFormat(absTimeDuration.getValue());
+									if (seconds > 0) {
+										hasPlaying = true;
+									}
 									// 1秒以上的误差才同步
 									if (seconds == 0) {
 										progressSlid.setValue(seconds);
@@ -875,7 +882,12 @@ public class DlnaClientSwing {
 			for (String url : videoInfo.getUrls()) {
 				playList.add(new PlayListItem(videoInfo, url));
 			}
-			play(0);
+			if (StringUtils.equals(curUrl, urlText)) {
+				play(curVideoIndex);
+			} else {
+				play(0);
+			}
+			curUrl = urlText;
 		} else {
 			logger.error("videoInfo is null");
 			JOptionPane.showMessageDialog(frame, "转换视频地址失败");
@@ -893,7 +905,7 @@ public class DlnaClientSwing {
 			} catch (Exception e) {
 			}
 			actionHelper.stop();
-			curVideoIndex = 0;
+			//curVideoIndex = 0;
 			playList = null;
 			stopBtn.setEnabled(false);
 			stopBtn2.setEnabled(false);
@@ -902,6 +914,7 @@ public class DlnaClientSwing {
 			progressSlid.setMaximum(0);
 			durationLeb.setText("");
 			curDurationLeb.setText("");
+			showCurrentPos();
 		}
 	}
 }
