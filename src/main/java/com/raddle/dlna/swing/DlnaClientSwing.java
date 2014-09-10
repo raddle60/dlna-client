@@ -45,14 +45,17 @@ import org.cybergarage.upnp.ArgumentList;
 import org.cybergarage.upnp.ControlPoint;
 import org.cybergarage.upnp.Device;
 import org.cybergarage.upnp.DeviceList;
+import org.cybergarage.upnp.Service;
 import org.cybergarage.upnp.device.NotifyListener;
 import org.cybergarage.upnp.device.SearchResponseListener;
+import org.cybergarage.upnp.event.EventListener;
 import org.cybergarage.upnp.ssdp.SSDPPacket;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.raddle.dlna.ctrl.ActionHelper;
+import com.raddle.dlna.event.DlnaEventParser;
 import com.raddle.dlna.http.LocalFileHttpHandler;
 import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
@@ -74,6 +77,7 @@ public class DlnaClientSwing {
 	private static Logger logger = LoggerFactory.getLogger(DlnaClientSwing.class);
 	///
 	private ControlPoint ctrlPoint;
+	private DlnaEventParser dlnaEventParser;
 	private List<VideoUrlParser> videoUrlParsers;
 	private List<PlayListItem> playList;
 	private int curVideoIndex = 0;
@@ -85,6 +89,7 @@ public class DlnaClientSwing {
 	private Date urlParseTime = null;
 	private LocalFileHttpHandler localFileHttpHandler = new LocalFileHttpHandler();
 	private String curUrl = null;
+	private Date lastStoppedEventTime = new Date();
 	/**
 	 * 是否在拖动进度条
 	 */
@@ -436,7 +441,9 @@ public class DlnaClientSwing {
 		});
 		stopBtn2.setBounds(598, 62, 61, 23);
 		frame.getContentPane().add(stopBtn2);
-
+		///
+		dlnaEventParser = new DlnaEventParser();
+		dlnaEventParser.init(new File("dlna/event.js"));
 		///
 		updateUrlParsers();
 		///
@@ -458,6 +465,41 @@ public class DlnaClientSwing {
 			@Override
 			public void deviceSearchResponseReceived(SSDPPacket ssdpPacket) {
 				updateDeviceComboList();
+			}
+		});
+		ctrlPoint.addEventListener(new EventListener() {
+
+			@Override
+			public void eventNotifyReceived(String uuid, long seq, String varName, String value) {
+				logger.info("eventNotifyReceived , uuid : " + uuid + ",seq : " + seq + ",varName : " + varName
+						+ ",value : " + value);
+				if (dlnaEventParser.isSupportedEvent(getSelectedDevice().getFriendlyName())) {
+					if (AVTransport.PLAYING.equals(dlnaEventParser.parseEvent(getSelectedDevice().getFriendlyName(),
+							varName, value))) {
+						pauseBtn.setText("暂停");
+						paused = false;
+						hasPlaying = true;
+						progressSlid.setEnabled(true);
+					} else if (AVTransport.PAUSED_PLAYBACK.equals(dlnaEventParser.parseEvent(getSelectedDevice()
+							.getFriendlyName(), varName, value))) {
+						pauseBtn.setText("继续");
+						paused = true;
+					} else if (AVTransport.STOPPED.equals(dlnaEventParser.parseEvent(getSelectedDevice()
+							.getFriendlyName(), varName, value))) {
+						// 不是手动触发的，服务端回调的
+						if (stopBtn.isEnabled()) {
+							if (playList != null && curVideoIndex < playList.size() - 1) {
+								// 有时候会重复通知，一旦翻页，5秒内不再翻页
+								if (DateUtils.addSeconds(lastStoppedEventTime, 30).before(new Date())) {
+									lastStoppedEventTime = new Date();
+									logger.info("auto play next video by stopped event , curVideoIndex : "
+											+ curVideoIndex);
+									play(curVideoIndex + 1);
+								}
+							}
+						}
+					}
+				}
 			}
 		});
 		// 启动
@@ -523,11 +565,13 @@ public class DlnaClientSwing {
 									}
 									showCurrentPos();
 									// 自动播放下一个
+									// 有事件通知的，在事件那播放下一个
 									if ((progressSlid.getValue() == 0 || progressSlid.getValue() >= progressSlid
 											.getMaximum())
 											&& playList != null
 											&& curVideoIndex < playList.size() - 1
-											&& hasPlaying) {
+											&& hasPlaying
+											&& !dlnaEventParser.isSupportedEvent(getSelectedDevice().getFriendlyName())) {
 										if (progressSlid.getValue() >= progressSlid.getMaximum()) {
 											try {
 												// 可能刚刚到最后一秒的开始
@@ -536,6 +580,8 @@ public class DlnaClientSwing {
 												return;
 											}
 										}
+										logger.info("auto play next video by scheduled task , curVideoIndex : "
+												+ curVideoIndex);
 										play(curVideoIndex + 1);
 									}
 								}
@@ -597,6 +643,17 @@ public class DlnaClientSwing {
 				try {
 					actionHelper.pause();
 				} catch (Exception e) {
+				}
+				Service service = selectedDevice.getService(AVTransport.SERVICE_TYPE);
+				if (service != null) {
+					logger.info("subscribe :" + selectedDevice.getFriendlyName());
+					try {
+						ctrlPoint.unsubscribe(service);
+						service.clearSID();
+						ctrlPoint.subscribe(service);
+					} catch (Exception e) {
+						logger.error("subscribe failed:" + selectedDevice.getFriendlyName(), e);
+					}
 				}
 				actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
 				paused = false;
@@ -913,6 +970,9 @@ public class DlnaClientSwing {
 	private void stopBtnAction() {
 		Device selectedDevice = getSelectedDevice();
 		if (selectedDevice != null) {
+			// 先设置状态，防止和事件处理冲突
+			stopBtn.setEnabled(false);
+			stopBtn2.setEnabled(false);
 			ActionHelper actionHelper = new ActionHelper(selectedDevice);
 			// 先暂停，再退出。可以增加退出速度
 			try {
@@ -922,8 +982,6 @@ public class DlnaClientSwing {
 			actionHelper.stop();
 			curVideoIndex = 0;
 			playList = null;
-			stopBtn.setEnabled(false);
-			stopBtn2.setEnabled(false);
 			progressSlid.setEnabled(false);
 			progressSlid.setValue(0);
 			progressSlid.setMaximum(0);

@@ -104,6 +104,8 @@ public class AVTransport {
 
 	public final static String STOPPED = "STOPPED";
 	public final static String PLAYING = "PLAYING";
+	public final static String TRANSITIONING = "TRANSITIONING";
+	public final static String PAUSED_PLAYBACK = "PAUSED_PLAYBACK";
 	public final static String OK = "OK";
 	public final static String ERROR_OCCURRED = "ERROR_OCCURRED";
 	public final static String NORMAL = "NORMAL";

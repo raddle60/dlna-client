@@ -24,7 +24,11 @@ var parserInfo = {
 * url转换
 **/
 function fetchVideoUrls(url,videoQuality){
-    var encodedUrl = url.replace("://",":##");
+    var encodedUrl = url;
+    if(url.indexOf("#") != -1){
+        encodedUrl = url.substring(0,url.indexOf("#"));
+    }
+    encodedUrl = encodedUrl.replace("://",":##");
     encodedUrl = videoUrlParser.toBase64String(encodedUrl,"gbk") + "";
     encodedUrl = encodedUrl.replace("+","-");
     encodedUrl = encodedUrl.replace("/","_");
