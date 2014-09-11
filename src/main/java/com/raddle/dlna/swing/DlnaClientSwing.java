@@ -916,7 +916,14 @@ public class DlnaClientSwing {
 				JOptionPane.showMessageDialog(frame, "视频地址无法访问");
 				return;
 			}
-			if (urlText.toLowerCase().substring(urlText.lastIndexOf('.')).indexOf("htm") != -1) {
+			String baseUrlText = urlText;
+			if (baseUrlText.indexOf("#") != -1) {
+				baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("#"));
+			}
+			if (baseUrlText.indexOf("?") != -1) {
+				baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("?"));
+			}
+			if (baseUrlText.toLowerCase().substring(baseUrlText.lastIndexOf('.')).indexOf("htm") != -1) {
 				try {
 					videoInfo = selectedParser.fetchVideoUrls(urlText,
 							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
