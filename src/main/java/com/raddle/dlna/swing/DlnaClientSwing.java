@@ -552,9 +552,15 @@ public class DlnaClientSwing {
 
 					@Override
 					public void run() {
+						if (progressSlid.getMaximum() > 0 && progressSlid.getValue() > progressSlid.getMaximum() - 20) {
+							// 减少服务器端负担
+							// 接近尾部，事件驱动不需要同步时间
+							// 非事件驱动，靠高频率进度同步
+							return;
+						}
 						syncPositionInfo();
 					}
-				}, 5, 5, TimeUnit.SECONDS);
+				}, 5, 10, TimeUnit.SECONDS);
 				// 启动高频率进度同步
 				scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
 
