@@ -5,6 +5,9 @@ function isSupportedEvent(deviceName){
     if(deviceName.indexOf("优酷") != -1){
         return true;
     }
+    if(deviceName.indexOf("BubbleUPnP") != -1){
+        return true;
+    }
     return false;
 }
 
