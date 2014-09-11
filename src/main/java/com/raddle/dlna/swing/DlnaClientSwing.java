@@ -693,9 +693,6 @@ public class DlnaClientSwing {
 				progressSlid.setMaximum(0);
 				progressSlid.setMinimum(0);
 				progressSlid.setValue(0);
-				if (curVideoIndex < playList.size() - 1) {
-					actionHelper.setNextVideoUrl(playList.get(curVideoIndex + 1).getVideoUrl());
-				}
 				quickSyncCount = 5;
 				syncPositionInfo();
 				// 确保播放，有时候调用了，播放器没启动
@@ -767,6 +764,8 @@ public class DlnaClientSwing {
 				qualityComb.addItem(keyValue.getValue());
 			}
 		}
+		dlnaEventParser = new DlnaEventParser();
+		dlnaEventParser.init(new File("dlna/event.js"));
 	}
 
 	private VideoUrlParser getSelectedParser() {
@@ -850,9 +849,17 @@ public class DlnaClientSwing {
 									progressSlid.setMinimum(0);
 									durationLeb.setText(DurationUtils.getTrackNRFormat(seconds));
 								}
+								String posTime = null;
+								Argument relTimeDuration = positionInfo.getArgument(AVTransport.RELTIME);
 								Argument absTimeDuration = positionInfo.getArgument(AVTransport.ABSTIME);
-								if (absTimeDuration != null && StringUtils.isNotEmpty(absTimeDuration.getValue())) {
-									int seconds = DurationUtils.parseTrackNRFormat(absTimeDuration.getValue());
+								if (relTimeDuration != null && StringUtils.isNotEmpty(relTimeDuration.getValue())) {
+									posTime = relTimeDuration.getValue();
+								} else if (absTimeDuration != null
+										&& StringUtils.isNotEmpty(absTimeDuration.getValue())) {
+									posTime = absTimeDuration.getValue();
+								}
+								if (StringUtils.isNotEmpty(posTime)) {
+									int seconds = DurationUtils.parseTrackNRFormat(posTime);
 									if (seconds > 0) {
 										hasPlaying = true;
 									}
