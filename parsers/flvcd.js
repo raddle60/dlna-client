@@ -19,15 +19,12 @@ function fetchVideoUrls(url,videoQuality){
 }
 
 function innerFetchVideoUrls(url,videoQuality){
-    logger.info(url);
     if(url.indexOf("#") != -1){
         url = url.substring(0,url.indexOf("#"));
     }
-    logger.info(url);
     if(url.indexOf("?") != -1){
         url = url.substring(0,url.indexOf("?"));
     }
-    logger.info(url);
     var parseUrl = "http://www.flvcd.com/parse.php?kw=" + httpclient.encodeUrl(url,"GBK") + "&flag=one&format=" + videoQuality;
     var content = httpclient.getRemotePage(parseUrl,"GBK",null);
     var videoUrlRegex =  new RegExp("<input type=\"hidden\" name=\"inf\" value=\"([^\"]+)\"/>","g");
@@ -40,6 +37,16 @@ function innerFetchVideoUrls(url,videoQuality){
             urlstr=urlstr.substring(0,urlstr.length - 1);
         }
         var urls = urlstr.split("|");
+        for(var i=0; i < urls.length ; i++){
+            var videoUrl = urls[i];
+            if(videoUrl.indexOf("he.yinyuetai.com/uploads/videos/common/")!=-1){
+                // 音乐台的有重定向，一些播放器不支持
+               var headerInfo = httpclient.getHttpHeader(videoUrl,null);
+               if(headerInfo.headers.get("Location") != null){
+                   urls[i] = headerInfo.headers.get("Location");
+               }
+            }
+        }
         videoInfo.urls = urls;
     }
     // 视频名称

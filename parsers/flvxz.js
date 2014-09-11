@@ -57,6 +57,13 @@ function fetchVideoUrls(url,videoQuality){
         }
         if(videoUrls[i].charAt(0) == '<'){
             var videoUrl = videoUrls[i].match(new RegExp("href=\"([^\"]+)\">"))[1];
+            if(videoUrl.indexOf("he.yinyuetai.com/uploads/videos/common/")!=-1){
+                // 音乐台的有重定向，一些播放器不支持
+               var headerInfo = httpclient.getHttpHeader(videoUrl,null);
+               if(headerInfo.headers.get("Location") != null){
+                   videoUrl = headerInfo.headers.get("Location");
+               }
+            }
             qualityInfo[qualityName].push(videoUrl);
             continue;
         }

@@ -13,6 +13,8 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -147,6 +149,17 @@ public class DlnaClientSwing {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void initialize() {
 		frame = new JFrame();
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				if (ctrlPoint != null) {
+					ctrlPoint.unsubscribe();
+					ctrlPoint.stop();
+				}
+				scheduledExecutorService.shutdown();
+				logger.info("DlnaClient closed");
+			}
+		});
 		frame.setBounds(100, 100, 793, 286);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
@@ -531,7 +544,8 @@ public class DlnaClientSwing {
 
 					@Override
 					public void run() {
-						if (stopBtn.isEnabled() && progressSlid.isEnabled() && !isDragSplit && !paused) {
+						if (stopBtn.isEnabled() && progressSlid.isEnabled() && !isDragSplit && !paused
+								&& !dlnaEventParser.isSupportedEvent(getSelectedDevice().getFriendlyName())) {
 							if (quickSyncCount > 0) {
 								quickSyncCount--;
 								syncPositionInfo();
@@ -923,7 +937,8 @@ public class DlnaClientSwing {
 			if (baseUrlText.indexOf("?") != -1) {
 				baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("?"));
 			}
-			if (baseUrlText.toLowerCase().substring(baseUrlText.lastIndexOf('.')).indexOf("htm") != -1) {
+			if (baseUrlText.toLowerCase().substring(baseUrlText.lastIndexOf('.')).indexOf("htm") != -1
+					|| StringUtils.isBlank(FilenameUtils.getExtension(baseUrlText))) {
 				try {
 					videoInfo = selectedParser.fetchVideoUrls(urlText,
 							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
