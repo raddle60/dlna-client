@@ -19,9 +19,15 @@ function fetchVideoUrls(url,videoQuality){
 }
 
 function innerFetchVideoUrls(url,videoQuality){
+    logger.info(url);
     if(url.indexOf("#") != -1){
         url = url.substring(0,url.indexOf("#"));
     }
+    logger.info(url);
+    if(url.indexOf("?") != -1){
+        url = url.substring(0,url.indexOf("?"));
+    }
+    logger.info(url);
     var parseUrl = "http://www.flvcd.com/parse.php?kw=" + httpclient.encodeUrl(url,"GBK") + "&flag=one&format=" + videoQuality;
     var content = httpclient.getRemotePage(parseUrl,"GBK",null);
     var videoUrlRegex =  new RegExp("<input type=\"hidden\" name=\"inf\" value=\"([^\"]+)\"/>","g");
