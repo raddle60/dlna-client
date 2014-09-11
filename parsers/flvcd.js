@@ -33,7 +33,6 @@ function innerFetchVideoUrls(url,videoQuality){
     }
     var parseUrl = "http://www.flvcd.com/parse.php?kw=" + httpclient.encodeUrl(url,"GBK") + "&flag=one&format=" + videoQuality;
     var content = httpclient.getRemotePage(parseUrl,"GBK",null);
-    logger.info(content);
     var videoUrlRegex =  new RegExp("<input type=\"hidden\" name=\"inf\" value=\"([^\"]+)\"/>","g");
     var matchedUrlHidden = content.match(videoUrlRegex);
     var videoInfo = {};
