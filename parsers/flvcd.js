@@ -33,6 +33,7 @@ function innerFetchVideoUrls(url,videoQuality){
     }
     var parseUrl = "http://www.flvcd.com/parse.php?kw=" + httpclient.encodeUrl(url,"GBK") + "&flag=one&format=" + videoQuality;
     var content = httpclient.getRemotePage(parseUrl,"GBK",null);
+    logger.info(content);
     var videoUrlRegex =  new RegExp("<input type=\"hidden\" name=\"inf\" value=\"([^\"]+)\"/>","g");
     var matchedUrlHidden = content.match(videoUrlRegex);
     var videoInfo = {};
@@ -61,14 +62,16 @@ function innerFetchVideoUrls(url,videoQuality){
     if(videoNameHidden != null && videoNameHidden.length > 0){
         var videoName = videoNameHidden[0].match(new RegExp("value=\"([^\"]+)\"/>"))[1];
         videoInfo.name = videoName;
+        var qualityName = videoName.match(new RegExp("(\\[[^\\[\\]]+\\])"));
+        if(qualityName != null && qualityName.length > 1){
+            videoInfo.qualityName = qualityName[1];
+        }
     } else {
         videoInfo.name = "名称未知";
     }
     if(videoInfo.urls){
-	    for(var i=0; i < parserInfo.qualitys.length ; i++){
-	        if(parserInfo.qualitys[i].key == videoQuality){
-	            videoInfo.qualityName = parserInfo.qualitys[i].value;
-	        }
+	    if(!videoInfo.qualityName){
+	       videoInfo.qualityName = "未知清晰度";
 	    }
         return videoInfo;
     }
