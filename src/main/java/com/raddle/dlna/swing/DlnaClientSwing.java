@@ -79,6 +79,7 @@ public class DlnaClientSwing {
 	private static Logger logger = LoggerFactory.getLogger(DlnaClientSwing.class);
 	///
 	private ControlPoint ctrlPoint;
+	private Server server;
 	private DlnaEventParser dlnaEventParser;
 	private List<VideoUrlParser> videoUrlParsers;
 	private List<PlayListItem> playList;
@@ -152,9 +153,24 @@ public class DlnaClientSwing {
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
+				close();
+			}
+
+			@Override
+			public void windowClosing(WindowEvent e) {
+				close();
+			}
+
+			private void close() {
 				if (ctrlPoint != null) {
 					ctrlPoint.unsubscribe();
 					ctrlPoint.stop();
+				}
+				if (server != null) {
+					try {
+						server.stop();
+					} catch (Exception e) {
+					}
 				}
 				scheduledExecutorService.shutdown();
 				logger.info("DlnaClient closed");
@@ -631,8 +647,7 @@ public class DlnaClientSwing {
 						}
 					}
 				}, 5, 60, TimeUnit.SECONDS);
-				// 启动httpserver本地视频推送
-				Server server = new Server(HTTP_SERVER_PORT);
+				server = new Server(HTTP_SERVER_PORT);
 				server.setHandler(localFileHttpHandler);
 				try {
 					server.start();
