@@ -612,7 +612,7 @@ public class DlnaClientSwing {
 										if (progressSlid.getValue() >= progressSlid.getMaximum()) {
 											try {
 												// 可能刚刚到最后一秒的开始
-												Thread.sleep(1000);
+												Thread.sleep(500);
 											} catch (InterruptedException e) {
 												return;
 											}
