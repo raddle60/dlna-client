@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -53,12 +54,14 @@ import org.cybergarage.upnp.device.SearchResponseListener;
 import org.cybergarage.upnp.event.EventListener;
 import org.cybergarage.upnp.ssdp.SSDPPacket;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.raddle.dlna.ctrl.ActionHelper;
 import com.raddle.dlna.event.DlnaEventParser;
 import com.raddle.dlna.http.LocalFileHttpHandler;
+import com.raddle.dlna.http.RemoteHttpProxyHandler;
 import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
 import com.raddle.dlna.url.parser.VideoInfo;
@@ -91,6 +94,7 @@ public class DlnaClientSwing {
 	private boolean hasPlaying = false;
 	private Date urlParseTime = null;
 	private LocalFileHttpHandler localFileHttpHandler = new LocalFileHttpHandler();
+	private RemoteHttpProxyHandler httpProxyHandler = new RemoteHttpProxyHandler();
 	private String curUrl = null;
 	private Date lastStoppedEventTime = new Date();
 	/**
@@ -120,6 +124,7 @@ public class DlnaClientSwing {
 	private JComboBox localIpComb;
 	private JButton playBtn2;
 	private JButton stopBtn2;
+	private JCheckBox localBufChk;
 
 	/**
 	 * Launch the application.
@@ -470,6 +475,11 @@ public class DlnaClientSwing {
 		});
 		stopBtn2.setBounds(598, 62, 61, 23);
 		frame.getContentPane().add(stopBtn2);
+
+		localBufChk = new JCheckBox("本地缓冲");
+		localBufChk.setSelected(true);
+		localBufChk.setBounds(392, 6, 103, 23);
+		frame.getContentPane().add(localBufChk);
 		///
 		dlnaEventParser = new DlnaEventParser();
 		dlnaEventParser.init(new File("dlna/event.js"));
@@ -655,7 +665,10 @@ public class DlnaClientSwing {
 					}
 				}, 5, 60, TimeUnit.SECONDS);
 				server = new Server(HTTP_SERVER_PORT);
-				server.setHandler(localFileHttpHandler);
+				HandlerCollection handlerCollection = new HandlerCollection();
+				handlerCollection.addHandler(localFileHttpHandler);
+				handlerCollection.addHandler(httpProxyHandler);
+				server.setHandler(handlerCollection);
 				try {
 					server.start();
 				} catch (Exception e) {
@@ -972,6 +985,16 @@ public class DlnaClientSwing {
 					videoInfo = selectedParser.fetchVideoUrls(urlText,
 							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
 					urlParseTime = new Date();
+					if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
+						httpProxyHandler.setUrls(new ArrayList<String>());
+						ArrayList<String> list = new ArrayList<String>();
+						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
+							httpProxyHandler.getUrls().add(videoInfo.getUrls().get(i));
+							list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/"
+									+ i);
+						}
+						videoInfo.setUrls(list);
+					}
 				} catch (Exception e1) {
 					logger.error(e1.getMessage(), e1);
 					JOptionPane.showMessageDialog(frame, "转换视频地址异常，" + e1.getMessage());
@@ -982,7 +1005,14 @@ public class DlnaClientSwing {
 				videoInfo.setName(FilenameUtils.getBaseName(urlText));
 				videoInfo.setQualityName("视频链接");
 				videoInfo.setUrls(new ArrayList<String>());
-				videoInfo.getUrls().add(urlText);
+				if (localBufChk.isSelected()) {
+					httpProxyHandler.setUrls(new ArrayList<String>());
+					httpProxyHandler.getUrls().add(urlText);
+					videoInfo.getUrls().add(
+							"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/" + 0);
+				} else {
+					videoInfo.getUrls().add(urlText);
+				}
 			}
 		} else {
 			// 本地路径

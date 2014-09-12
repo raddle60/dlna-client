@@ -59,6 +59,22 @@ public class HttpHelper {
 		}
 	}
 
+	public static Object getRemotePageWithCallback(String url, Map<Object, Object> headers, HttpCallback callback)
+			throws IOException {
+		HttpGet httpGet = new HttpGet(url);
+		if (headers != null) {
+			for (Map.Entry<Object, Object> entry : headers.entrySet()) {
+				httpGet.addHeader(entry.getKey() + "", entry.getValue() + "");
+			}
+		}
+		CloseableHttpResponse response = httpclient.execute(httpGet);
+		try {
+			return callback.httpResponse(response);
+		} finally {
+			response.close();
+		}
+	}
+
 	public static HttpHeaderInfo getHttpHeader(String url, Map<Object, Object> headers) throws ClientProtocolException,
 			IOException {
 		HttpGet httpGet = new HttpGet(url);
