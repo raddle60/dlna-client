@@ -568,7 +568,8 @@ public class DlnaClientSwing {
 					public void run() {
 						if (stopBtn.isEnabled() && progressSlid.isEnabled() && !isDragSplit && !paused
 								&& !dlnaEventParser.isSupportedEvent(getSelectedDevice().getFriendlyName())) {
-							if (quickSyncCount > 0) {
+							// 减少服务器端负担,接近尾部不同步进度，防止影响切换
+							if (quickSyncCount > 0 && progressSlid.getValue() < progressSlid.getMaximum() - 10) {
 								quickSyncCount--;
 								syncPositionInfo();
 								SwingUtilities.invokeLater(new Runnable() {
