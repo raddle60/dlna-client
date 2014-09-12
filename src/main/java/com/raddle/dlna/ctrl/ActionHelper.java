@@ -39,13 +39,24 @@ public class ActionHelper {
 		}
 	}
 
-	public void setNextVideoUrl(String url) {
+	public boolean isSupportNext() {
+		Service avTransService = device.getService(AVTransport.SERVICE_TYPE);
+		Action nextAct = avTransService.getAction(AVTransport.NEXT);
+		return nextAct != null;
+	}
+
+	public void next(String url) {
 		Service avTransService = device.getService(AVTransport.SERVICE_TYPE);
 		Action setNextUriAct = avTransService.getAction(AVTransport.SETNEXTAVTRANSPORTURI);
 		setNextUriAct.setArgumentValue(AVTransport.INSTANCEID, "0");
 		setNextUriAct.setArgumentValue(AVTransport.NEXTURI, url);
-		setNextUriAct.setArgumentValue(AVTransport.NEXTURI, "");
+		setNextUriAct.setArgumentValue(AVTransport.NEXTURIMETADATA, "");
 		if (!setNextUriAct.postControlAction()) {
+			return;
+		}
+		Action nextAct = avTransService.getAction(AVTransport.NEXT);
+		nextAct.setArgumentValue(AVTransport.INSTANCEID, "0");
+		if (!nextAct.postControlAction()) {
 			return;
 		}
 	}
