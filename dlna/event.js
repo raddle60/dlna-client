@@ -8,6 +8,9 @@ function isSupportedEvent(deviceName){
     if(deviceName.indexOf("BubbleUPnP") != -1){
         return true;
     }
+    if(deviceName.indexOf("ITV") != -1){
+        return true;
+    }
     return false;
 }
 
