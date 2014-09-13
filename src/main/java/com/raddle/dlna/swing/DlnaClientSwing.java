@@ -477,7 +477,6 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(stopBtn2);
 
 		localBufChk = new JCheckBox("本地缓冲下集");
-		localBufChk.setSelected(true);
 		localBufChk.setBounds(392, 6, 103, 23);
 		frame.getContentPane().add(localBufChk);
 		///
