@@ -12,10 +12,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.omg.CORBA.BooleanHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +25,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 	private static Logger logger = LoggerFactory.getLogger(RemoteHttpProxyHandler.class);
 	private List<String> urls;
 	private BufferThread bufferThread;
-	private static final long MAX_BUFFERED_SIZE = 1024 * 1024 * 20;//20M
+	private static final long MAX_BUFFERED_SIZE = 1024 * 1024 * 10;//10M
 	private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
 
 	@Override
@@ -33,34 +35,48 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			logger.info("received request : " + target);
 			startBufferThread();
 			Map<Object, Object> headers = new HashMap<Object, Object>();
-			if (request.getHeader(HttpHeader.RANGE.asString()) != null) {
-				headers.put(HttpHeader.RANGE.asString(), request.getHeader(HttpHeader.RANGE.asString()));
+			String range = request.getHeader(HttpHeader.RANGE.asString());
+			if (range != null) {
+				headers.put(HttpHeader.RANGE.asString(), range);
 			}
 			final int videoIndex = Integer.parseInt(target.substring("/remote/".length()));
 			final byte[] bufferedBytes = bufferThread.out.toByteArray();
 			final int bufferedVideoIndex = bufferThread.bufferedVideoIndex;
+			final BooleanHolder isSetHeader = new BooleanHolder(false);
+			if (bufferedVideoIndex == videoIndex) {
+				if (range == null || (range != null && range.indexOf("0-") != -1)) {
+					for (Map.Entry<String, String> entry : bufferThread.headers.entrySet()) {
+						if (StringUtils.isNotEmpty(entry.getValue())) {
+							response.setHeader(entry.getKey(), entry.getValue());
+						}
+					}
+					response.setStatus(bufferThread.statusCode);
+					isSetHeader.value = true;
+					logger.info("read buffer data " + videoIndex);
+					IOUtils.write(bufferedBytes, response.getOutputStream());
+					logger.info("write buffer data complete " + videoIndex);
+					// 跳过缓冲区中的数据
+					headers.put(HttpHeader.RANGE.asString(),
+							StringUtils.replace(range, "0-", bufferedBytes.length + "-"));
+				}
+			}
 			if (videoIndex < urls.size() - 1) {
 				bufferThread.bufferVideo(videoIndex + 1);
 			}
+			logger.info("request : " + target + " remote server " + urls.get(videoIndex));
 			HttpHelper.getRemotePageWithCallback(urls.get(videoIndex), headers, new HttpCallback() {
 
 				@Override
 				public Object httpResponse(CloseableHttpResponse remoteResponse) {
-					copyHeader(HttpHeader.CONTENT_LENGTH, remoteResponse, response);
-					copyHeader(HttpHeader.CONTENT_RANGE, remoteResponse, response);
-					copyHeader(HttpHeader.ACCEPT_RANGES, remoteResponse, response);
-					copyHeader(HttpHeader.CONTENT_TYPE, remoteResponse, response);
-					response.setStatus(remoteResponse.getStatusLine().getStatusCode());
+					if (!isSetHeader.value) {
+						copyHeader(HttpHeader.CONTENT_LENGTH, remoteResponse, response);
+						copyHeader(HttpHeader.CONTENT_RANGE, remoteResponse, response);
+						copyHeader(HttpHeader.ACCEPT_RANGES, remoteResponse, response);
+						copyHeader(HttpHeader.CONTENT_TYPE, remoteResponse, response);
+						response.setStatus(remoteResponse.getStatusLine().getStatusCode());
+					}
 					try {
-						if (bufferedVideoIndex == videoIndex) {
-							String range = request.getHeader(HttpHeader.RANGE.asString());
-							if (range == null || (range != null && range.indexOf("0-") != -1)) {
-								logger.info("read buffer data " + videoIndex);
-								IOUtils.write(bufferedBytes, response.getOutputStream());
-								// 跳过缓冲区中已写入的数据
-								IOUtils.skip(remoteResponse.getEntity().getContent(), bufferedBytes.length);
-							}
-						}
+						logger.info("request : " + target + " start copy");
 						IOUtils.copy(remoteResponse.getEntity().getContent(), response.getOutputStream());
 						logger.info("request : " + target + " copy finished");
 					} catch (Exception e) {
@@ -87,6 +103,10 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			bufferThread.setName("buffer-next-video-thread");
 			bufferThread.setDaemon(true);
 			bufferThread.start();
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+			}
 		}
 	}
 
@@ -95,8 +115,13 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 		private volatile boolean isBuffering = false;
 		private volatile boolean watingStop = false;
 		private ByteArrayOutputStream out = new ByteArrayOutputStream();
+		private Map<String, String> headers = new HashMap<String, String>();
+		private int statusCode = -1;
 
 		private void bufferVideo(int videoIndex) {
+			if (bufferedVideoIndex == videoIndex) {
+				return;
+			}
 			while (isBuffering) {
 				try {
 					sleep(10);
@@ -127,6 +152,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 				}
 				isBuffering = true;
 				out.reset();
+				headers.clear();
 				logger.info("start buffer " + bufferedVideoIndex);
 				try {
 					HttpHelper.getRemotePageWithCallback(urls.get(bufferedVideoIndex), null, new HttpCallback() {
@@ -138,6 +164,11 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 								isBuffering = false;
 								return null;
 							}
+							copyHeader(HttpHeader.CONTENT_LENGTH, remoteResponse);
+							copyHeader(HttpHeader.CONTENT_RANGE, remoteResponse);
+							copyHeader(HttpHeader.ACCEPT_RANGES, remoteResponse);
+							copyHeader(HttpHeader.CONTENT_TYPE, remoteResponse);
+							statusCode = remoteResponse.getStatusLine().getStatusCode();
 							try {
 								int n = 0;
 								InputStream input = remoteResponse.getEntity().getContent();
@@ -160,6 +191,13 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 							}
 							logger.info("buffer complete " + bufferedVideoIndex);
 							return null;
+						}
+
+						private void copyHeader(HttpHeader httpHeader, CloseableHttpResponse remoteResponse) {
+							if (remoteResponse.getFirstHeader(httpHeader.asString()) != null) {
+								headers.put(httpHeader.asString(), remoteResponse.getFirstHeader(httpHeader.asString())
+										.getValue());
+							}
 						}
 					});
 					isBuffering = false;
