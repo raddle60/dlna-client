@@ -679,7 +679,7 @@ public class DlnaClientSwing {
 
 	private void play(int i) {
 		if (playList != null && playList.size() > i) {
-			Device selectedDevice = getSelectedDevice();
+			final Device selectedDevice = getSelectedDevice();
 			if (selectedDevice != null) {
 				curVideoIndex = i;
 				previousBtn.setEnabled(curVideoIndex > 0);
@@ -691,17 +691,6 @@ public class DlnaClientSwing {
 				try {
 					actionHelper.pause();
 				} catch (Exception e) {
-				}
-				Service service = selectedDevice.getService(AVTransport.SERVICE_TYPE);
-				if (service != null) {
-					logger.info("subscribe :" + selectedDevice.getFriendlyName());
-					try {
-						ctrlPoint.unsubscribe(service);
-						service.clearSID();
-						ctrlPoint.subscribe(service);
-					} catch (Exception e) {
-						logger.error("subscribe failed:" + selectedDevice.getFriendlyName(), e);
-					}
 				}
 				actionHelper.play(playList.get(curVideoIndex).getVideoUrl());
 				paused = false;
@@ -718,6 +707,17 @@ public class DlnaClientSwing {
 				new Thread() {
 					@Override
 					public void run() {
+						Service service = selectedDevice.getService(AVTransport.SERVICE_TYPE);
+						if (service != null) {
+							logger.info("subscribe :" + selectedDevice.getFriendlyName());
+							try {
+								ctrlPoint.unsubscribe(service);
+								service.clearSID();
+								ctrlPoint.subscribe(service);
+							} catch (Exception e) {
+								logger.error("subscribe failed:" + selectedDevice.getFriendlyName(), e);
+							}
+						}
 						try {
 							Thread.sleep(1000);
 						} catch (InterruptedException e1) {
