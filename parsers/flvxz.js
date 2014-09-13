@@ -47,7 +47,13 @@ function fetchVideoUrls(url,videoQuality){
         matchedVideoName = content.match(new RegExp(">([^<>]+)_01\\."));
         if(matchedVideoName != null && matchedVideoName.length > 1){
             videoName = matchedVideoName[1];
-        }
+        } else {
+			// 没有编号
+			matchedVideoName = content.match(new RegExp(">([^<>]+)\\.[^<>]+</a>"));
+			if(matchedVideoName != null && matchedVideoName.length > 1){
+				videoName = matchedVideoName[1];
+			}
+		}
     }
     // 视频地址
     var videoUrlRegex =  new RegExp("(>\\[[^\\[\\]]+\\]<)|(<a rel=\"noreferrer\" href=\"[^\"]+\">)","g");
