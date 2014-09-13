@@ -44,14 +44,14 @@ function fetchVideoUrls(url,videoQuality){
         videoName = matchedVideoName[1];
     }
     // 视频地址
-    var videoUrlRegex =  new RegExp("(\\[[^\\[\\]]+\\])|(<a rel=\"noreferrer\" href=\"[^\"]+\">)","g");
+    var videoUrlRegex =  new RegExp("(>\\[[^\\[\\]]+\\]<)|(<a rel=\"noreferrer\" href=\"[^\"]+\">)","g");
     var videoUrls = content.match(videoUrlRegex);
     var qualityName = "";
     var qualityInfo = {};
     // 按清晰度分类
     for(var i=0; i < videoUrls.length ; i++){
-        if(videoUrls[i].charAt(0) == '['){
-            qualityName = videoUrls[i].substring(1,videoUrls[i].length-1);
+        if(videoUrls[i].charAt(0) == '>'){
+            qualityName = videoUrls[i].substring(2,videoUrls[i].length-2);
             qualityInfo[qualityName] = [];
             continue;
         }
