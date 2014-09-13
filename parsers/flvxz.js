@@ -40,8 +40,14 @@ function fetchVideoUrls(url,videoQuality){
     var content = httpclient.getRemotePage(parseUrl,"gbk", {"Referer":"https://www.flvxz.com/"});
     var videoName = "名称未知";
     var matchedVideoName = content.match(new RegExp("<h4 class=\"media-heading\">([^<>]+)</h4>"));
-    if(matchedVideoName != null && matchedVideoName.length > 0){
+    if(matchedVideoName != null && matchedVideoName.length > 1){
         videoName = matchedVideoName[1];
+    } else {
+        // 从视频列表中取
+        matchedVideoName = content.match(new RegExp(">([^<>]+)_01\\."));
+        if(matchedVideoName != null && matchedVideoName.length > 1){
+            videoName = matchedVideoName[1];
+        }
     }
     // 视频地址
     var videoUrlRegex =  new RegExp("(>\\[[^\\[\\]]+\\]<)|(<a rel=\"noreferrer\" href=\"[^\"]+\">)","g");
