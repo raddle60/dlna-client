@@ -103,6 +103,34 @@ public class HttpHelper {
 		}
 	}
 
+	public static HttpHeaderInfo getHttpHeaderUseDefaultClient(String url, Map<Object, Object> headers)
+			throws ClientProtocolException, IOException {
+		HttpGet httpGet = new HttpGet(url);
+		if (headers != null) {
+			for (Map.Entry<Object, Object> entry : headers.entrySet()) {
+				httpGet.addHeader(entry.getKey() + "", entry.getValue() + "");
+			}
+		}
+		CloseableHttpResponse response = httpclient.execute(httpGet);
+		try {
+			response.close();
+			HttpHeaderInfo headerInfo = new HttpHeaderInfo();
+			headerInfo.setStatus(response.getStatusLine().getStatusCode());
+			headerInfo.setReasonPhrase(response.getStatusLine().getReasonPhrase());
+			Header[] allHeaders = response.getAllHeaders();
+			if (allHeaders != null) {
+				Map<String, Object> headerMap = new HashMap<String, Object>();
+				for (Header header : allHeaders) {
+					headerMap.put(header.getName(), header.getValue());
+				}
+				headerInfo.setHeaders(headerMap);
+			}
+			return headerInfo;
+		} finally {
+			response.close();
+		}
+	}
+
 	public static String encodeUrl(String url, String charset) throws UnsupportedEncodingException {
 		return URLEncoder.encode(url, charset);
 	}
