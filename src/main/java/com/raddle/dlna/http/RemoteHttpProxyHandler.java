@@ -31,7 +31,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 	@Override
 	public void handle(final String target, Request baseRequest, final HttpServletRequest request,
 			final HttpServletResponse response) throws IOException, ServletException {
-		if (target.startsWith("/remote/")) {
+		if (target.startsWith("/remote/") && target.indexOf("join") == -1) {
 			logger.info("received request : " + target);
 			startBufferThread();
 			Map<Object, Object> headers = new HashMap<Object, Object>();

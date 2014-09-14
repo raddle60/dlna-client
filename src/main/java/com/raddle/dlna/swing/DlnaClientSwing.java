@@ -60,8 +60,11 @@ import org.slf4j.LoggerFactory;
 
 import com.raddle.dlna.ctrl.ActionHelper;
 import com.raddle.dlna.event.DlnaEventParser;
+import com.raddle.dlna.http.HttpHeaderInfo;
+import com.raddle.dlna.http.HttpHelper;
 import com.raddle.dlna.http.LocalFileHttpHandler;
 import com.raddle.dlna.http.RemoteHttpProxyHandler;
+import com.raddle.dlna.http.RemoteJoinHttpProxyHandler;
 import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
 import com.raddle.dlna.url.parser.VideoInfo;
@@ -94,7 +97,8 @@ public class DlnaClientSwing {
 	private boolean hasPlaying = false;
 	private Date urlParseTime = null;
 	private LocalFileHttpHandler localFileHttpHandler = new LocalFileHttpHandler();
-	private RemoteHttpProxyHandler httpProxyHandler = new RemoteHttpProxyHandler();
+	private RemoteHttpProxyHandler httpBufferProxyHandler = new RemoteHttpProxyHandler();
+	private RemoteJoinHttpProxyHandler httpJoinProxyHandler = new RemoteJoinHttpProxyHandler();
 	private String curUrl = null;
 	private Date lastStoppedEventTime = new Date();
 	/**
@@ -125,12 +129,14 @@ public class DlnaClientSwing {
 	private JButton playBtn2;
 	private JButton stopBtn2;
 	private JCheckBox localBufChk;
+	private JCheckBox localJoinChk;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
+			@Override
 			public void run() {
 				try {
 					DlnaClientSwing window = new DlnaClientSwing();
@@ -177,6 +183,7 @@ public class DlnaClientSwing {
 					} catch (Exception e) {
 					}
 				}
+				HttpHelper.close();
 				scheduledExecutorService.shutdown();
 				logger.info("DlnaClient closed");
 			}
@@ -213,6 +220,7 @@ public class DlnaClientSwing {
 
 		JButton playBtn = new JButton("播放");
 		playBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				playBtnAction();
 			}
@@ -223,6 +231,7 @@ public class DlnaClientSwing {
 		deviceRefreshBtn = new JButton("启动中");
 		deviceRefreshBtn.setEnabled(false);
 		deviceRefreshBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				ctrlPoint.search();
 			}
@@ -292,6 +301,7 @@ public class DlnaClientSwing {
 
 		addrParseComb = new JComboBox();
 		addrParseComb.addItemListener(new ItemListener() {
+			@Override
 			public void itemStateChanged(ItemEvent e) {
 				if (e.getStateChange() == ItemEvent.SELECTED) {
 					VideoUrlParser selectedParser = getSelectedParser();
@@ -315,6 +325,7 @@ public class DlnaClientSwing {
 
 		pauseBtn = new JButton("暂停");
 		pauseBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				Device selectedDevice = getSelectedDevice();
 				if (selectedDevice != null) {
@@ -337,6 +348,7 @@ public class DlnaClientSwing {
 		stopBtn = new JButton("停止");
 		stopBtn.setEnabled(false);
 		stopBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				stopBtnAction();
 			}
@@ -346,6 +358,7 @@ public class DlnaClientSwing {
 
 		previousBtn = new JButton("上一个");
 		previousBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (playList != null && playList.size() > 0 && curVideoIndex > 0) {
 					play(curVideoIndex - 1);
@@ -357,6 +370,7 @@ public class DlnaClientSwing {
 
 		nextBtn = new JButton("下一个");
 		nextBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (playList != null && playList.size() > 0 && curVideoIndex < playList.size() - 1) {
 					play(curVideoIndex + 1);
@@ -397,6 +411,7 @@ public class DlnaClientSwing {
 
 		JButton quickForwardBtn = new JButton("快进");
 		quickForwardBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				Device selectedDevice = getSelectedDevice();
 				if (progressSlid.isEnabled() && selectedDevice != null && playList != null && playList.size() > 0) {
@@ -413,6 +428,7 @@ public class DlnaClientSwing {
 
 		JButton quickBackBtn = new JButton("快退");
 		quickBackBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				Device selectedDevice = getSelectedDevice();
 				if (progressSlid.isEnabled() && selectedDevice != null && playList != null && playList.size() > 0) {
@@ -429,6 +445,7 @@ public class DlnaClientSwing {
 
 		pasteBtn = new JButton("粘帖");
 		pasteBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				pasteUrlText();
 			}
@@ -438,6 +455,7 @@ public class DlnaClientSwing {
 
 		parserRefreshBtn = new JButton("刷新");
 		parserRefreshBtn.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				updateUrlParsers();
 			}
@@ -459,6 +477,7 @@ public class DlnaClientSwing {
 
 		playBtn2 = new JButton("播放");
 		playBtn2.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				playBtnAction();
 			}
@@ -469,6 +488,7 @@ public class DlnaClientSwing {
 		stopBtn2 = new JButton("停止");
 		stopBtn2.setEnabled(false);
 		stopBtn2.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				stopBtnAction();
 			}
@@ -476,9 +496,27 @@ public class DlnaClientSwing {
 		stopBtn2.setBounds(598, 62, 61, 23);
 		frame.getContentPane().add(stopBtn2);
 
-		localBufChk = new JCheckBox("本地缓冲下集");
-		localBufChk.setBounds(392, 6, 103, 23);
+		localBufChk = new JCheckBox("本地缓冲");
+		localBufChk.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (!localBufChk.isSelected()) {
+					localJoinChk.setSelected(false);
+				}
+			}
+		});
+		localBufChk.setBounds(392, 6, 93, 23);
 		frame.getContentPane().add(localBufChk);
+
+		localJoinChk = new JCheckBox("本地拼接");
+		localJoinChk.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				localBufChk.setSelected(localJoinChk.isSelected());
+			}
+		});
+		localJoinChk.setBounds(492, 6, 103, 23);
+		frame.getContentPane().add(localJoinChk);
 		///
 		dlnaEventParser = new DlnaEventParser();
 		dlnaEventParser.init(new File("dlna/event.js"));
@@ -655,6 +693,10 @@ public class DlnaClientSwing {
 										newPlayList.add(new PlayListItem(videoInfo, url));
 									}
 									playList = newPlayList;
+									if (localBufChk.isSelected()) {
+										httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
+										httpJoinProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
+									}
 								} catch (Exception e1) {
 									logger.error(e1.getMessage(), e1);
 									return;
@@ -666,7 +708,8 @@ public class DlnaClientSwing {
 				server = new Server(HTTP_SERVER_PORT);
 				HandlerCollection handlerCollection = new HandlerCollection();
 				handlerCollection.addHandler(localFileHttpHandler);
-				handlerCollection.addHandler(httpProxyHandler);
+				handlerCollection.addHandler(httpBufferProxyHandler);
+				handlerCollection.addHandler(httpJoinProxyHandler);
 				server.setHandler(handlerCollection);
 				try {
 					server.start();
@@ -812,8 +855,9 @@ public class DlnaClientSwing {
 			boolean hasSameDeviceName = false;
 			for (int i = 0; i < itemCnt; i++) {
 				String itemName = (String) deviceComb.getItemAt(i);
-				if (itemName == null)
+				if (itemName == null) {
 					continue;
+				}
 				if (itemName.compareTo(devComboName) == 0) {
 					hasSameDeviceName = true;
 					break;
@@ -834,15 +878,17 @@ public class DlnaClientSwing {
 	}
 
 	private Device getDevice(String devComboName) {
-		if (devComboName == null)
+		if (devComboName == null) {
 			return null;
+		}
 
 		DeviceList devList = ctrlPoint.getDeviceList();
 		int devCnt = devList.size();
 		for (int n = 0; n < devCnt; n++) {
 			Device dev = devList.getDevice(n);
-			if (devComboName.compareTo(getDeviceComboName(dev)) == 0)
+			if (devComboName.compareTo(getDeviceComboName(dev)) == 0) {
 				return dev;
+			}
 		}
 		return null;
 	}
@@ -985,12 +1031,31 @@ public class DlnaClientSwing {
 							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
 					urlParseTime = new Date();
 					if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
-						httpProxyHandler.setUrls(new ArrayList<String>());
+						httpBufferProxyHandler.setUrls(new ArrayList<String>());
+						httpJoinProxyHandler.setUrls(new ArrayList<String>());
+						httpJoinProxyHandler.setContentLengths(new ArrayList<Long>());
 						ArrayList<String> list = new ArrayList<String>();
 						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
-							httpProxyHandler.getUrls().add(videoInfo.getUrls().get(i));
-							list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/"
-									+ i);
+							String videoUrl = videoInfo.getUrls().get(i);
+							httpBufferProxyHandler.getUrls().add(videoUrl);
+							httpJoinProxyHandler.getUrls().add(videoUrl);
+							if (localJoinChk.isSelected()) {
+								// 获取头信息
+								HttpHeaderInfo headerInfo = HttpHelper.getHttpHeaderUseDefaultClient(videoUrl, null);
+								if (headerInfo.getStatus() != 200) {
+									JOptionPane.showMessageDialog(frame, "获得视频头信息失败, " + headerInfo.getReasonPhrase());
+									return;
+								}
+								logger.info("video " + i + " length : " + headerInfo.getHeaders().get("Content-Length"));
+								httpJoinProxyHandler.getContentLengths().add(
+										Long.parseLong(headerInfo.getHeaders().get("Content-Length") + ""));
+								list.clear();
+								list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
+										+ "/remote/join");
+							} else {
+								list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
+										+ "/remote/" + i);
+							}
 						}
 						videoInfo.setUrls(list);
 					}
@@ -1005,8 +1070,8 @@ public class DlnaClientSwing {
 				videoInfo.setQualityName("视频链接");
 				videoInfo.setUrls(new ArrayList<String>());
 				if (localBufChk.isSelected()) {
-					httpProxyHandler.setUrls(new ArrayList<String>());
-					httpProxyHandler.getUrls().add(urlText);
+					httpBufferProxyHandler.setUrls(new ArrayList<String>());
+					httpBufferProxyHandler.getUrls().add(urlText);
 					videoInfo.getUrls().add(
 							"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/" + 0);
 				} else {
