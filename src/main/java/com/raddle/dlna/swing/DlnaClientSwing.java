@@ -547,8 +547,13 @@ public class DlnaClientSwing {
 
 			@Override
 			public void eventNotifyReceived(String uuid, long seq, String varName, String value) {
-				logger.info("eventNotifyReceived , uuid : " + uuid + ",seq : " + seq + ",varName : " + varName
-						+ ",value : " + value);
+				if (value != null
+						&& (value.indexOf("RelativeTimePosition") != -1 || value.indexOf("AbsoluteTimePosition") != -1)) {
+				} else {
+					logger.info("eventNotifyReceived , uuid : " + uuid + ",seq : " + seq + ",varName : " + varName
+							+ ",value : " + value);
+				}
+
 				if (dlnaEventParser.isSupportedEvent(getSelectedDevice().getFriendlyName())) {
 					if (AVTransport.PLAYING.equals(dlnaEventParser.parseEvent(getSelectedDevice().getFriendlyName(),
 							varName, value))) {
