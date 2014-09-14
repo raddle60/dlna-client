@@ -508,14 +508,15 @@ public class DlnaClientSwing {
 		localBufChk.setBounds(392, 6, 93, 23);
 		frame.getContentPane().add(localBufChk);
 
-		localJoinChk = new JCheckBox("本地拼接");
+		localJoinChk = new JCheckBox("本地拼接(未完成)");
+		localJoinChk.setEnabled(false);
 		localJoinChk.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				localBufChk.setSelected(localJoinChk.isSelected());
 			}
 		});
-		localJoinChk.setBounds(492, 6, 103, 23);
+		localJoinChk.setBounds(492, 6, 132, 23);
 		frame.getContentPane().add(localJoinChk);
 		///
 		dlnaEventParser = new DlnaEventParser();
