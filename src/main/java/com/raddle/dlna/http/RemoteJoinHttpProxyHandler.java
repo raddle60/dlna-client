@@ -58,7 +58,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 					copyHeader(HttpHeader.CONTENT_TYPE, remoteResponse, response);
 					long length = Long.parseLong(remoteResponse.getFirstHeader(HttpHeader.CONTENT_LENGTH.asString())
 							.getValue());
-					String reponseRange = "bytes " + requestStart.value + "-" + (requestStart.value + length) + "/"
+					String reponseRange = "bytes " + requestStart.value + "-" + (requestStart.value + length - 1) + "/"
 							+ getTotalLength();
 					logger.info("received response ,status : " + remoteResponse.getStatusLine().getStatusCode()
 							+ ", length : " + length + ", range : " + reponseRange);
