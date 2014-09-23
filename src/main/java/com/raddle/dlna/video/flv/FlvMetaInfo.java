@@ -1,9 +1,11 @@
 package com.raddle.dlna.video.flv;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
@@ -58,6 +60,17 @@ public class FlvMetaInfo {
 		IOUtils.skip(inputStream, getMetaInfoLength());
 	}
 
+	public FlvMetaInfo deepClone() {
+		try {
+			ByteArrayOutputStream os = new ByteArrayOutputStream();
+			writeFlvMetaInfo(os);
+			InputStream is = new ByteArrayInputStream(os.toByteArray());
+			return readFlvMetaInfo(fileLength, is);
+		} catch (IOException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
+	}
+
 	public static FlvMetaInfo readFlvMetaInfo(long fileLength, InputStream inputStream) throws IOException {
 		FlvHeader readFlvHeader = FlvHeader.readFlvHeader(inputStream);
 		TagHeader readTagHeaderForMeta = TagHeader.readTagHeader(inputStream);
@@ -71,34 +84,35 @@ public class FlvMetaInfo {
 	 * @param joinMetaInfo 被修改的信息
 	 * @return 返回合并信息
 	 */
-	public static FlvMetaInfo joinMetaInfo(List<FlvMetaInfo> orgMetaInfo, List<FlvMetaInfo> joinMetaInfo) {
-		if (joinMetaInfo.size() == 1) {
-			return joinMetaInfo.get(0);
+	public static List<FlvMetaInfo> joinMetaInfo(List<FlvMetaInfo> orgMetaInfo) {
+		List<FlvMetaInfo> joinMetaInfo = new ArrayList<FlvMetaInfo>();
+		for (FlvMetaInfo flvMetaInfo : orgMetaInfo) {
+			joinMetaInfo.add(flvMetaInfo.deepClone());
 		}
-		FlvMetaInfo joinedMetaInfo = joinMetaInfo.get(0);
-		joinedMetaInfo.getScriptTagBody().getDuration()
+		FlvMetaInfo firstJoinedMetaInfo = joinMetaInfo.get(0);
+		firstJoinedMetaInfo.getScriptTagBody().getDuration()
 				.setValue(getCurrentDurationSeconds(orgMetaInfo, orgMetaInfo.size()));
 		for (int i = 1; i < orgMetaInfo.size(); i++) {
-			addFilepositionAndTime(orgMetaInfo, i, joinedMetaInfo, joinMetaInfo.get(i));
+			addFilepositionAndTime(orgMetaInfo, i, firstJoinedMetaInfo, joinMetaInfo.get(i));
 		}
 		// 重算body长度
 		ByteArrayOutputStream bodyOut = new ByteArrayOutputStream();
 		try {
-			joinedMetaInfo.getScriptTagBody().writeScriptTagBody(bodyOut);
+			firstJoinedMetaInfo.getScriptTagBody().writeScriptTagBody(bodyOut);
 		} catch (IOException e) {
 		}
 		// 设置body长度
-		joinedMetaInfo.getScriptTagHeader().setDataLength(bodyOut.size() - 4);
+		firstJoinedMetaInfo.getScriptTagHeader().setDataLength(bodyOut.size() - 4);
 		// 计算增加的长度
-		int incr = joinedMetaInfo.getDataLength() - orgMetaInfo.get(0).getDataLength();
-		for (int i = orgMetaInfo.get(0).getScriptTagBody().getFilepositions().size(); i < joinedMetaInfo
+		int incr = firstJoinedMetaInfo.getDataLength() - orgMetaInfo.get(0).getDataLength();
+		for (int i = orgMetaInfo.get(0).getScriptTagBody().getFilepositions().size(); i < firstJoinedMetaInfo
 				.getScriptTagBody().getFilepositions().size(); i++) {
-			ScriptDataDouble fileposition = joinedMetaInfo.getScriptTagBody().getFilepositions().get(i);
+			ScriptDataDouble fileposition = firstJoinedMetaInfo.getScriptTagBody().getFilepositions().get(i);
 			double pos = (Double) fileposition.getValue();
 			// 由于增加了文件2，体积变大了
 			fileposition.setValue(pos + incr);
 		}
-		return joinedMetaInfo;
+		return joinMetaInfo;
 	}
 
 	private static void addFilepositionAndTime(List<FlvMetaInfo> orgMetaInfo, int index, FlvMetaInfo joinedMetaInfo,
