@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 
+import org.apache.commons.io.IOUtils;
+
 import com.raddle.dlna.util.ByteUtils;
 
 /**
@@ -22,7 +24,7 @@ public class FlvHeader {
 
 	public static FlvHeader readFlvHeader(InputStream inputStream) throws IOException {
 		byte[] headers = new byte[9];
-		inputStream.read(headers);
+		IOUtils.read(inputStream, headers);
 		String fileType = new String(Arrays.copyOfRange(headers, 0, 3));
 		if (!fileType.equals("FLV")) {
 			// 不是flv视频
@@ -35,11 +37,11 @@ public class FlvHeader {
 		flvHeader.setLength(ByteUtils.byteToInt(Arrays.copyOfRange(headers, 5, 9)));
 		if (flvHeader.getLength() > headers.length) {
 			byte[] ext = new byte[flvHeader.getLength() - headers.length];
-			inputStream.read(ext);
+			IOUtils.read(inputStream, ext);
 			flvHeader.setExtHeader(ext);
 		}
 		byte[] preTagSizeBytes = new byte[4];
-		inputStream.read(preTagSizeBytes);
+		IOUtils.read(inputStream, preTagSizeBytes);
 		flvHeader.setPreTagLength(ByteUtils.byteToInt(preTagSizeBytes));
 		return flvHeader;
 	}

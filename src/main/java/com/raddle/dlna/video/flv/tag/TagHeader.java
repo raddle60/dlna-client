@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 
+import org.apache.commons.io.IOUtils;
+
 import com.raddle.dlna.util.ByteUtils;
 
 public class TagHeader {
@@ -16,7 +18,7 @@ public class TagHeader {
 
 	public static TagHeader readTagHeader(InputStream inputStream) throws IOException {
 		byte[] tagHeadBytes = new byte[11];
-		int read = inputStream.read(tagHeadBytes);
+		int read = IOUtils.read(inputStream, tagHeadBytes);
 		if (read != 11) {
 			return null;
 		}
