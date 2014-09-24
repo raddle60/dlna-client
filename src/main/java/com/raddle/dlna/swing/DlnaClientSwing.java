@@ -60,11 +60,11 @@ import org.slf4j.LoggerFactory;
 
 import com.raddle.dlna.ctrl.ActionHelper;
 import com.raddle.dlna.event.DlnaEventParser;
-import com.raddle.dlna.http.HttpHeaderInfo;
 import com.raddle.dlna.http.HttpHelper;
 import com.raddle.dlna.http.LocalFileHttpHandler;
 import com.raddle.dlna.http.RemoteHttpProxyHandler;
 import com.raddle.dlna.http.RemoteJoinHttpProxyHandler;
+import com.raddle.dlna.http.join.JoinItem;
 import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
 import com.raddle.dlna.url.parser.VideoInfo;
@@ -508,8 +508,7 @@ public class DlnaClientSwing {
 		localBufChk.setBounds(392, 6, 93, 23);
 		frame.getContentPane().add(localBufChk);
 
-		localJoinChk = new JCheckBox("本地拼接(未完成)");
-		localJoinChk.setEnabled(false);
+		localJoinChk = new JCheckBox("本地拼接");
 		localJoinChk.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -701,7 +700,13 @@ public class DlnaClientSwing {
 									playList = newPlayList;
 									if (localBufChk.isSelected()) {
 										httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
-										httpJoinProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
+										if (httpJoinProxyHandler.getJoinItems() != null && localJoinChk.isSelected()
+												&& videoInfo.getUrls().size() > 1) {
+											for (int i = 0; i < videoInfo.getUrls().size(); i++) {
+												httpJoinProxyHandler.getJoinItems().get(i)
+														.setUrl(videoInfo.getUrls().get(i));
+											}
+										}
 									}
 								} catch (Exception e1) {
 									logger.error(e1.getMessage(), e1);
@@ -1038,30 +1043,35 @@ public class DlnaClientSwing {
 					urlParseTime = new Date();
 					if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
 						httpBufferProxyHandler.setUrls(new ArrayList<String>());
-						httpJoinProxyHandler.setUrls(new ArrayList<String>());
-						httpJoinProxyHandler.setContentLengths(new ArrayList<Long>());
 						ArrayList<String> list = new ArrayList<String>();
+						ArrayList<JoinItem> orgJoinItems = new ArrayList<JoinItem>();
 						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
 							String videoUrl = videoInfo.getUrls().get(i);
 							httpBufferProxyHandler.getUrls().add(videoUrl);
-							httpJoinProxyHandler.getUrls().add(videoUrl);
-							if (localJoinChk.isSelected()) {
+							if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
 								// 获取头信息
-								HttpHeaderInfo headerInfo = HttpHelper.getHttpHeaderUseDefaultClient(videoUrl, null);
-								if (headerInfo.getStatus() != 200) {
-									JOptionPane.showMessageDialog(frame, "获得视频头信息失败, " + headerInfo.getReasonPhrase());
+								try {
+									JoinItem loadJoinItem = JoinItem.loadJoinItem(videoUrl, null);
+									if (loadJoinItem.getFlvMetaInfo().getFlvHeader() == null) {
+										JOptionPane.showMessageDialog(frame, "获得视频头信息失败, 不是flv视频");
+										return;
+									}
+									orgJoinItems.add(loadJoinItem);
+								} catch (Exception e) {
+									logger.error(e.getMessage(), e);
+									JOptionPane.showMessageDialog(frame, "获得视频头信息失败, " + e.getMessage());
 									return;
 								}
-								logger.info("video " + i + " length : " + headerInfo.getHeaders().get("Content-Length"));
-								httpJoinProxyHandler.getContentLengths().add(
-										Long.parseLong(headerInfo.getHeaders().get("Content-Length") + ""));
-								list.clear();
-								list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
-										+ "/remote/join");
 							} else {
 								list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
 										+ "/remote/" + i);
 							}
+						}
+						if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
+							list.clear();
+							list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
+									+ "/remote/join");
+							httpJoinProxyHandler.setJoinItems(JoinItem.joinVideo(orgJoinItems));
 						}
 						videoInfo.setUrls(list);
 					}

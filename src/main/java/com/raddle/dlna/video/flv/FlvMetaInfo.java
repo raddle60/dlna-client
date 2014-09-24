@@ -22,6 +22,7 @@ import com.raddle.dlna.video.flv.tag.script.ScriptTagBody;
 public class FlvMetaInfo {
 	private long fileLength;
 	private long preFileLength;
+	private long joinIncrLength;
 	private double preDurationSeconds;
 	private FlvHeader flvHeader;
 	private TagHeader scriptTagHeader;
@@ -35,7 +36,7 @@ public class FlvMetaInfo {
 	}
 
 	public Double getDurationSeconds() {
-		return (Double) scriptTagBody.getDuration().getValue();
+		return scriptTagBody.getDuration().getValue();
 	}
 
 	public int getMetaInfoLength() {
@@ -105,12 +106,19 @@ public class FlvMetaInfo {
 		firstJoinedMetaInfo.getScriptTagHeader().setDataLength(bodyOut.size() - 4);
 		// 计算增加的长度
 		int incr = firstJoinedMetaInfo.getDataLength() - orgMetaInfo.get(0).getDataLength();
-		for (int i = orgMetaInfo.get(0).getScriptTagBody().getFilepositions().size(); i < firstJoinedMetaInfo
-				.getScriptTagBody().getFilepositions().size(); i++) {
+		for (int i = 0; i < firstJoinedMetaInfo.getScriptTagBody().getFilepositions().size(); i++) {
 			ScriptDataDouble fileposition = firstJoinedMetaInfo.getScriptTagBody().getFilepositions().get(i);
-			double pos = (Double) fileposition.getValue();
+			double pos = fileposition.getValue();
 			// 由于增加了文件2，体积变大了
 			fileposition.setValue(pos + incr);
+		}
+		// 文件长度也要增加
+		for (int i = 0; i < joinMetaInfo.size(); i++) {
+			FlvMetaInfo flvMetaInfo = joinMetaInfo.get(i);
+			if (i > 0) {
+				flvMetaInfo.setPreFileLength(flvMetaInfo.getPreFileLength() + incr);
+			}
+			flvMetaInfo.setJoinIncrLength(incr);
 		}
 		return joinMetaInfo;
 	}
@@ -118,13 +126,13 @@ public class FlvMetaInfo {
 	private static void addFilepositionAndTime(List<FlvMetaInfo> orgMetaInfo, int index, FlvMetaInfo joinedMetaInfo,
 			FlvMetaInfo toJoinMetaInfo) {
 		for (ScriptDataDouble fileposition : toJoinMetaInfo.getScriptTagBody().getFilepositions()) {
-			double pos = (Double) fileposition.getValue();
+			double pos = fileposition.getValue();
 			double newPos = pos - toJoinMetaInfo.getMetaInfoLength() + getCurrentTagPos(orgMetaInfo, index);
 			toJoinMetaInfo.setPreFileLength(getCurrentTagPos(orgMetaInfo, index));
 			joinedMetaInfo.getScriptTagBody().getFilepositions().add(new ScriptDataDouble(newPos));
 		}
 		for (ScriptDataDouble timeObj : toJoinMetaInfo.getScriptTagBody().getTimes()) {
-			double time = (Double) timeObj.getValue();
+			double time = timeObj.getValue();
 			double newTime = time + getCurrentDurationSeconds(orgMetaInfo, index);
 			toJoinMetaInfo.setPreDurationSeconds(getCurrentDurationSeconds(orgMetaInfo, index));
 			joinedMetaInfo.getScriptTagBody().getTimes().add(new ScriptDataDouble(newTime));
@@ -181,6 +189,14 @@ public class FlvMetaInfo {
 
 	public void setPreDurationSeconds(double preDurationSeconds) {
 		this.preDurationSeconds = preDurationSeconds;
+	}
+
+	public long getJoinIncrLength() {
+		return joinIncrLength;
+	}
+
+	public void setJoinIncrLength(long joinIncrLength) {
+		this.joinIncrLength = joinIncrLength;
 	}
 
 }
