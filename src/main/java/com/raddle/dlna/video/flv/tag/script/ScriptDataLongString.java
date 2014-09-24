@@ -33,7 +33,7 @@ public class ScriptDataLongString implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public String getValue() {
 		return value;
 	}
 

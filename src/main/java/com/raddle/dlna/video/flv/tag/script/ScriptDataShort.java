@@ -28,7 +28,7 @@ public class ScriptDataShort implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public Short getValue() {
 		return value;
 	}
 

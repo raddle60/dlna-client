@@ -26,7 +26,7 @@ public class ScriptDataBoolean implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public Boolean getValue() {
 		return value;
 	}
 

@@ -41,7 +41,7 @@ public class ScriptDataArray extends AbstractScriptData implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public List<ScriptDataKeyPair> getValue() {
 		return attrs;
 	}
 

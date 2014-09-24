@@ -36,7 +36,7 @@ public class ScriptDataStrictArray extends AbstractScriptData implements ScriptD
 	}
 
 	@Override
-	public Object getValue() {
+	public List<ScriptData> getValue() {
 		return elements;
 	}
 }

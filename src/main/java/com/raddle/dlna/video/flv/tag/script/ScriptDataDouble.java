@@ -35,7 +35,7 @@ public class ScriptDataDouble implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public Double getValue() {
 		return value;
 	}
 

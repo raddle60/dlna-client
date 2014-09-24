@@ -43,7 +43,7 @@ public class ScriptDataString implements ScriptData {
 	}
 
 	@Override
-	public Object getValue() {
+	public String getValue() {
 		return value;
 	}
 
