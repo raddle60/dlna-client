@@ -125,16 +125,37 @@ public class FlvMetaInfo {
 
 	private static void addFilepositionAndTime(List<FlvMetaInfo> orgMetaInfo, int index, FlvMetaInfo joinedMetaInfo,
 			FlvMetaInfo toJoinMetaInfo) {
+		long currentTagPos = getCurrentTagPos(orgMetaInfo, index);
 		for (ScriptDataDouble fileposition : toJoinMetaInfo.getScriptTagBody().getFilepositions()) {
 			double pos = fileposition.getValue();
-			double newPos = pos - toJoinMetaInfo.getMetaInfoLength() + getCurrentTagPos(orgMetaInfo, index);
-			toJoinMetaInfo.setPreFileLength(getCurrentTagPos(orgMetaInfo, index));
+			double newPos = pos - toJoinMetaInfo.getMetaInfoLength() + currentTagPos;
+			toJoinMetaInfo.setPreFileLength(currentTagPos);
 			joinedMetaInfo.getScriptTagBody().getFilepositions().add(new ScriptDataDouble(newPos));
 		}
+		double startTime = 0;
+		for (ScriptDataDouble timeObj : toJoinMetaInfo.getScriptTagBody().getTimes()) {
+			if (timeObj.getValue() > 1) {
+				startTime = timeObj.getValue();
+				break;
+			}
+		}
+		double currentDurationSeconds = getCurrentDurationSeconds(orgMetaInfo, index);
 		for (ScriptDataDouble timeObj : toJoinMetaInfo.getScriptTagBody().getTimes()) {
 			double time = timeObj.getValue();
-			double newTime = time + getCurrentDurationSeconds(orgMetaInfo, index);
-			toJoinMetaInfo.setPreDurationSeconds(getCurrentDurationSeconds(orgMetaInfo, index));
+			double newTime = 0;
+			if (startTime >= currentDurationSeconds) {
+				// 说明分段视频，已经加过时间
+				if (time == 0) {
+					// 第一帧可能是特殊帧
+					newTime = currentDurationSeconds;
+				} else {
+					newTime = time;
+				}
+			} else {
+				// 加上增量
+				newTime = time + currentDurationSeconds;
+			}
+			toJoinMetaInfo.setPreDurationSeconds(currentDurationSeconds);
 			joinedMetaInfo.getScriptTagBody().getTimes().add(new ScriptDataDouble(newTime));
 		}
 	}

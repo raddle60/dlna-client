@@ -21,6 +21,7 @@ import com.raddle.dlna.video.flv.tag.TagHeader;
 public class ScriptTagBody {
 	private List<ScriptData> scriptDatas = new ArrayList<ScriptData>();
 	private int tagLength;
+	private int dataLength;
 
 	public static ScriptTagBody readScriptTagBody(TagHeader tagHeader, InputStream inputStream) throws IOException {
 		if (tagHeader.getTagType() != 18) {
@@ -32,6 +33,7 @@ public class ScriptTagBody {
 		if (read != tagHeader.getDataLength()) {
 			return null;
 		}
+		body.setDataLength(tagHeader.getDataLength());
 		ByteArrayInputStream tagDataInputStrieam = new ByteArrayInputStream(bos.toByteArray());
 		List<ScriptData> list = new ArrayList<ScriptData>();
 		while (tagDataInputStrieam.available() > 0) {
@@ -100,8 +102,10 @@ public class ScriptTagBody {
 		for (ScriptData scriptData : scriptDatas) {
 			scriptData.write(bos);
 		}
-		// 写入结束标记
-		AbstractScriptData.writeScriptEnd(bos);
+		// 写入结束标记,刚好相等就不需要结束标记
+		if (dataLength - bos.size() == 3) {
+			AbstractScriptData.writeScriptEnd(bos);
+		}
 		// 计算整个tag长度
 		tagLength = bos.size() + 11;
 		bos.write(ByteUtils.intToByte(tagLength));
@@ -122,5 +126,13 @@ public class ScriptTagBody {
 
 	public void setTagLength(int tagLength) {
 		this.tagLength = tagLength;
+	}
+
+	public int getDataLength() {
+		return dataLength;
+	}
+
+	public void setDataLength(int dataLength) {
+		this.dataLength = dataLength;
 	}
 }
