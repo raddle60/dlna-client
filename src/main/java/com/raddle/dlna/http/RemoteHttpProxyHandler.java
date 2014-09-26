@@ -27,6 +27,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 	private BufferThread bufferThread;
 	private static final long MAX_BUFFERED_SIZE = 1024 * 1024 * 10;//10M
 	private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
+	private ReceiveSpeedCallback speedCallback;
 
 	@Override
 	public void handle(final String target, Request baseRequest, final HttpServletRequest request,
@@ -77,11 +78,19 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 					}
 					try {
 						logger.info("request : " + target + " start copy");
-						IOUtils.copy(remoteResponse.getEntity().getContent(), response.getOutputStream());
+						int n = 0;
+						InputStream input = remoteResponse.getEntity().getContent();
+						byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+						while (-1 != (n = input.read(buffer))) {
+							response.getOutputStream().write(buffer, 0, n);
+							received(videoIndex, n);
+						}
+						input.close();
 						logger.info("request : " + target + " copy finished");
 					} catch (Exception e) {
 						logger.info("request : " + target + " force closed");
 					}
+					receivedComplete(videoIndex);
 					return null;
 				}
 
@@ -106,6 +115,26 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			try {
 				Thread.sleep(50);
 			} catch (InterruptedException e) {
+			}
+		}
+	}
+
+	private void received(int videoIndex, long length) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.receivedBytes(videoIndex, urls.size(), length);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			}
+		}
+	}
+
+	private void receivedComplete(int videoIndex) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.receivedComplete(videoIndex, urls.size());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 	}
@@ -223,4 +252,11 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 		this.urls = urls;
 	}
 
+	public ReceiveSpeedCallback getSpeedCallback() {
+		return speedCallback;
+	}
+
+	public void setSpeedCallback(ReceiveSpeedCallback speedCallback) {
+		this.speedCallback = speedCallback;
+	}
 }

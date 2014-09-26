@@ -62,6 +62,7 @@ import com.raddle.dlna.ctrl.ActionHelper;
 import com.raddle.dlna.event.DlnaEventParser;
 import com.raddle.dlna.http.HttpHelper;
 import com.raddle.dlna.http.LocalFileHttpHandler;
+import com.raddle.dlna.http.ReceiveSpeedCallback;
 import com.raddle.dlna.http.RemoteHttpProxyHandler;
 import com.raddle.dlna.http.RemoteJoinHttpProxyHandler;
 import com.raddle.dlna.http.join.JoinItem;
@@ -69,6 +70,7 @@ import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
 import com.raddle.dlna.url.parser.VideoInfo;
 import com.raddle.dlna.url.parser.VideoUrlParser;
+import com.raddle.dlna.util.ByteUtils;
 import com.raddle.dlna.util.DurationUtils;
 import com.raddle.dlna.util.KeyValue;
 import com.raddle.dlna.util.LocalIpUtils;
@@ -738,8 +740,7 @@ public class DlnaClientSwing {
 				curVideoIndex = i;
 				previousBtn.setEnabled(curVideoIndex > 0);
 				nextBtn.setEnabled(curVideoIndex < playList.size() - 1);
-				frame.setTitle(playList.get(curVideoIndex).getVideoInfo().getName() + " - " + (curVideoIndex + 1) + "/"
-						+ playList.size() + " - " + playList.get(curVideoIndex).getVideoInfo().getQualityName());
+				updateTitle(null);
 				ActionHelper actionHelper = new ActionHelper(selectedDevice);
 				// 先暂停，如果在播放过程中，直接切换，播放器会出问题
 				try {
@@ -804,6 +805,14 @@ public class DlnaClientSwing {
 					}
 				}.start();
 			}
+		}
+	}
+
+	private void updateTitle(String extStr) {
+		if (playList != null && curVideoIndex >= 0 && curVideoIndex < playList.size()) {
+			frame.setTitle(playList.get(curVideoIndex).getVideoInfo().getName() + " - " + (curVideoIndex + 1) + "/"
+					+ playList.size() + " - " + playList.get(curVideoIndex).getVideoInfo().getQualityName()
+					+ StringUtils.defaultString(extStr));
 		}
 	}
 
@@ -1043,6 +1052,7 @@ public class DlnaClientSwing {
 					urlParseTime = new Date();
 					if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
 						httpBufferProxyHandler.setUrls(new ArrayList<String>());
+						httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
 						ArrayList<String> list = new ArrayList<String>();
 						ArrayList<JoinItem> orgJoinItems = new ArrayList<JoinItem>();
 						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
@@ -1072,6 +1082,7 @@ public class DlnaClientSwing {
 							list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
 									+ "/remote/join");
 							httpJoinProxyHandler.setJoinItems(JoinItem.joinVideo(orgJoinItems));
+							httpJoinProxyHandler.setSpeedCallback(new SpeedCallback());
 						}
 						videoInfo.setUrls(list);
 					}
@@ -1086,6 +1097,7 @@ public class DlnaClientSwing {
 				videoInfo.setQualityName("视频链接");
 				videoInfo.setUrls(new ArrayList<String>());
 				if (localBufChk.isSelected()) {
+					httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
 					httpBufferProxyHandler.setUrls(new ArrayList<String>());
 					httpBufferProxyHandler.getUrls().add(urlText);
 					videoInfo.getUrls().add(
@@ -1151,4 +1163,51 @@ public class DlnaClientSwing {
 			showCurrentPos();
 		}
 	}
+
+	private class SpeedCallback implements ReceiveSpeedCallback {
+		private long preTime = -1;
+		private long received = 0;
+
+		@Override
+		public void receivedComplete(final int videIndex, final int totalSegments) {
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - 缓冲完成");
+				}
+			});
+		}
+
+		@Override
+		public void receivedBytes(final int videIndex, final int totalSegments, final long receivedBytes) {
+			received += receivedBytes;
+			if (preTime == -1) {
+				preTime = System.currentTimeMillis();
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - 开始缓冲");
+					}
+				});
+				return;
+			}
+			final long spanTime = System.currentTimeMillis() - preTime;
+			if (spanTime > 500) {
+				final long sumReceived = received;
+				received = 0;
+				preTime = System.currentTimeMillis();
+				SwingUtilities.invokeLater(new Runnable() {
+
+					@Override
+					public void run() {
+						double speed = sumReceived * 1000.0 / spanTime;
+						updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - "
+								+ ByteUtils.readable((long) speed));
+					}
+				});
+			}
+		}
+	};
 }

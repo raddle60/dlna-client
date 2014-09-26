@@ -31,6 +31,7 @@ import com.raddle.dlna.video.flv.tag.script.ScriptDataDouble;
 public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 	private static Logger logger = LoggerFactory.getLogger(RemoteJoinHttpProxyHandler.class);
 	private List<JoinItem> joinItems;
+	private ReceiveSpeedCallback speedCallback;
 
 	@Override
 	public void handle(final String target, Request baseRequest, final HttpServletRequest request,
@@ -89,6 +90,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 			logger.info("return response , range : " + reponseRange + ", length : " + returnLength);
 			response.setStatus(206);
 			final BooleanHolder hasError = new BooleanHolder(false);
+			final int curIndexVideo = videoIndex;
 			HttpHelper.getRemotePageWithCallback(joinItems.get(videoIndex).getUrl(), headers, new HttpCallback() {
 
 				@Override
@@ -115,6 +117,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 						receivedLength += 11;
 						boolean increasedTimestamp = false;
 						while (readTagHeader != null) {
+							received(curIndexVideo, 11);
 							if (readTagHeader.getTagType() == 18) {
 								// 跳过
 								IOUtils.skip(remoteResponse.getEntity().getContent(), readTagHeader.getDataLength() + 4);
@@ -140,6 +143,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 							IOUtils.copyLarge(remoteResponse.getEntity().getContent(), response.getOutputStream(), 0,
 									readTagHeader.getDataLength() + 4);
 							receivedLength += (readTagHeader.getDataLength() + 4);
+							received(curIndexVideo, readTagHeader.getDataLength() + 4);
 							readTagHeader = TagHeader.readTagHeader(remoteResponse.getEntity().getContent());
 						}
 						logger.info("request : " + target + " copy finished , byte : " + receivedLength);
@@ -177,6 +181,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 				logger.info("request : " + target + " " + videoIndex + " , remote server : "
 						+ joinItems.get(videoIndex).getUrl());
 				final JoinItem nextJoinItem = joinItems.get(videoIndex);
+				final int nextIndexVideo = videoIndex;
 				HttpHelper.getRemotePageWithCallback(joinItems.get(videoIndex).getUrl(), nextHeaders,
 						new HttpCallback() {
 
@@ -195,6 +200,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 									receivedLength += 11;
 									boolean increasedTimestamp = false;
 									while (readTagHeader != null) {
+										received(nextIndexVideo, 11);
 										if (readTagHeader.getTagType() == 18) {
 											// 跳过
 											IOUtils.skip(remoteResponse.getEntity().getContent(),
@@ -222,6 +228,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 										IOUtils.copyLarge(remoteResponse.getEntity().getContent(),
 												response.getOutputStream(), 0, readTagHeader.getDataLength() + 4);
 										receivedLength += (readTagHeader.getDataLength() + 4);
+										received(nextIndexVideo, readTagHeader.getDataLength() + 4);
 										readTagHeader = TagHeader
 												.readTagHeader(remoteResponse.getEntity().getContent());
 									}
@@ -240,7 +247,28 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 							}
 						});
 			}
+			receivedComplete(videoIndex);
 			baseRequest.setHandled(true);
+		}
+	}
+
+	private void received(int videoIndex, long length) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.receivedBytes(videoIndex, joinItems.size(), length);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			}
+		}
+	}
+
+	private void receivedComplete(int videoIndex) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.receivedComplete(videoIndex, joinItems.size());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			}
 		}
 	}
 
@@ -264,6 +292,14 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 
 	public void setJoinItems(List<JoinItem> joinItems) {
 		this.joinItems = joinItems;
+	}
+
+	public ReceiveSpeedCallback getSpeedCallback() {
+		return speedCallback;
+	}
+
+	public void setSpeedCallback(ReceiveSpeedCallback speedCallback) {
+		this.speedCallback = speedCallback;
 	}
 
 }

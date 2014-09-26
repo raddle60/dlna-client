@@ -1,8 +1,13 @@
 package com.raddle.dlna.util;
 
 import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 
 public class ByteUtils {
+	private static final long KB = 1024;
+	private static final long MB = 1024 * KB;
+	private static final long GB = 1024 * MB;
+
 	public static long byteToLong(byte[] bytes) {
 		ByteBuffer buffer = ByteBuffer.allocate(8);
 		if (bytes.length < 8) {
@@ -62,5 +67,18 @@ public class ByteUtils {
 		ByteBuffer buffer = ByteBuffer.allocate(8);
 		buffer.putDouble(value);
 		return buffer.array();
+	}
+
+	public static String readable(long bytes) {
+		DecimalFormat df = new DecimalFormat("#.###");
+		if (bytes >= GB) {
+			return df.format((double) bytes / GB) + "GB";
+		} else if (bytes >= MB) {
+			return df.format((double) bytes / MB) + "MB";
+		} else if (bytes >= KB) {
+			return df.format((double) bytes / KB) + "KB";
+		} else {
+			return bytes + "";
+		}
 	}
 }
