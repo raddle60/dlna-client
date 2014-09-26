@@ -113,6 +113,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 						// 修改时间戳
 						TagHeader readTagHeader = TagHeader.readTagHeader(remoteResponse.getEntity().getContent());
 						receivedLength += 11;
+						boolean increasedTimestamp = false;
 						while (readTagHeader != null) {
 							if (readTagHeader.getTagType() == 18) {
 								// 跳过
@@ -125,9 +126,16 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 								logger.error(readTagHeader.getTagType() + " is not video or audio type");
 								throw new RuntimeException(readTagHeader.getTagType() + " is not video or audio type");
 							}
-							readTagHeader
-									.setTimestamp((int) (curJoinItem.getFlvMetaInfo().getPreDurationSeconds() * 1000)
-											+ readTagHeader.getTimestamp());
+							if (readTagHeader.getTimestamp() > 0
+									&& readTagHeader.getTimestamp() >= curJoinItem.getFlvMetaInfo()
+											.getPreDurationSeconds()) {
+								increasedTimestamp = true;
+							}
+							if (!increasedTimestamp) {
+								readTagHeader
+										.setTimestamp((int) (curJoinItem.getFlvMetaInfo().getPreDurationSeconds() * 1000)
+												+ readTagHeader.getTimestamp());
+							}
 							readTagHeader.writeTagHeader(response.getOutputStream());
 							IOUtils.copyLarge(remoteResponse.getEntity().getContent(), response.getOutputStream(), 0,
 									readTagHeader.getDataLength() + 4);
@@ -185,6 +193,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 									TagHeader readTagHeader = TagHeader.readTagHeader(remoteResponse.getEntity()
 											.getContent());
 									receivedLength += 11;
+									boolean increasedTimestamp = false;
 									while (readTagHeader != null) {
 										if (readTagHeader.getTagType() == 18) {
 											// 跳过
@@ -200,8 +209,15 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 											throw new RuntimeException(readTagHeader.getTagType()
 													+ " is not video or audio type");
 										}
-										readTagHeader.setTimestamp((int) (nextJoinItem.getFlvMetaInfo()
-												.getPreDurationSeconds() * 1000) + readTagHeader.getTimestamp());
+										if (readTagHeader.getTimestamp() > 0
+												&& readTagHeader.getTimestamp() >= nextJoinItem.getFlvMetaInfo()
+														.getPreDurationSeconds()) {
+											increasedTimestamp = true;
+										}
+										if (!increasedTimestamp) {
+											readTagHeader.setTimestamp((int) (nextJoinItem.getFlvMetaInfo()
+													.getPreDurationSeconds() * 1000) + readTagHeader.getTimestamp());
+										}
 										readTagHeader.writeTagHeader(response.getOutputStream());
 										IOUtils.copyLarge(remoteResponse.getEntity().getContent(),
 												response.getOutputStream(), 0, readTagHeader.getDataLength() + 4);
