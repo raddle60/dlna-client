@@ -1121,6 +1121,7 @@ public class DlnaClientSwing {
 			videoInfo.getUrls().add(
 					"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/file/" + videoName);
 			localFileHttpHandler.setLocalFile(file);
+			localFileHttpHandler.setSpeedCallback(new SpeedCallback());
 		}
 		if (videoInfo != null) {
 			playList = new ArrayList<PlayListItem>();
@@ -1166,7 +1167,22 @@ public class DlnaClientSwing {
 
 	private class SpeedCallback implements ReceiveSpeedCallback {
 		private long preTime = -1;
-		private long received = 0;
+		private long speedReceived = 0;
+		private long totalReceived = 0;
+
+		@Override
+		public void startReceive(final int videIndex, final int totalSegments) {
+			preTime = -1;
+			speedReceived = 0;
+			totalReceived = 0;
+			SwingUtilities.invokeLater(new Runnable() {
+
+				@Override
+				public void run() {
+					updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - 准备推送");
+				}
+			});
+		}
 
 		@Override
 		public void receivedComplete(final int videIndex, final int totalSegments) {
@@ -1174,40 +1190,44 @@ public class DlnaClientSwing {
 
 				@Override
 				public void run() {
-					updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - 缓冲完成");
+					updateTitle(" - (" + (videIndex + 1) + "/" + totalSegments + " - 推送完成 - "
+							+ ByteUtils.readable(totalReceived) + ")");
 				}
 			});
 		}
 
 		@Override
 		public void receivedBytes(final int videIndex, final int totalSegments, final long receivedBytes) {
-			received += receivedBytes;
+			speedReceived += receivedBytes;
+			totalReceived += receivedBytes;
 			if (preTime == -1) {
 				preTime = System.currentTimeMillis();
 				SwingUtilities.invokeLater(new Runnable() {
 
 					@Override
 					public void run() {
-						updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - 开始缓冲");
+						updateTitle(" - (" + (videIndex + 1) + "/" + totalSegments + " - 开始推送)");
 					}
 				});
 				return;
 			}
 			final long spanTime = System.currentTimeMillis() - preTime;
 			if (spanTime > 500) {
-				final long sumReceived = received;
-				received = 0;
+				final long sumReceived = speedReceived;
+				speedReceived = 0;
 				preTime = System.currentTimeMillis();
 				SwingUtilities.invokeLater(new Runnable() {
 
 					@Override
 					public void run() {
 						double speed = sumReceived * 1000.0 / spanTime;
-						updateTitle(" - " + (videIndex + 1) + "/" + totalSegments + " - "
-								+ ByteUtils.readable((long) speed));
+						updateTitle(" - (" + (videIndex + 1) + "/" + totalSegments + " - "
+								+ ByteUtils.readable((long) speed) + "/s 已推送： " + ByteUtils.readable(totalReceived)
+								+ ")");
 					}
 				});
 			}
 		}
+
 	};
 }

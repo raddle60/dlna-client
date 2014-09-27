@@ -6,6 +6,8 @@ package com.raddle.dlna.http;
  * time : 2014年9月26日 下午10:42:19
  */
 public interface ReceiveSpeedCallback {
+	public void startReceive(int videIndex, int totalSegments);
+
 	public void receivedBytes(int videIndex, int totalSegments, long receivedBytes);
 
 	public void receivedComplete(int videIndex, int totalSegments);

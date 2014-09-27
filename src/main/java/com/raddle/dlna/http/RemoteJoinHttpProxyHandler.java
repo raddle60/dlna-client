@@ -91,6 +91,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 			response.setStatus(206);
 			final BooleanHolder hasError = new BooleanHolder(false);
 			final int curIndexVideo = videoIndex;
+			startReceive(0);
 			HttpHelper.getRemotePageWithCallback(joinItems.get(videoIndex).getUrl(), headers, new HttpCallback() {
 
 				@Override
@@ -249,6 +250,16 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 			}
 			receivedComplete(videoIndex);
 			baseRequest.setHandled(true);
+		}
+	}
+
+	private void startReceive(int videoIndex) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.startReceive(videoIndex, 1);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			}
 		}
 	}
 

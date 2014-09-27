@@ -1,5 +1,6 @@
 package com.raddle.dlna.http;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +12,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.eclipse.jetty.http.HttpHeader;
@@ -44,6 +44,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			final byte[] bufferedBytes = bufferThread.out.toByteArray();
 			final int bufferedVideoIndex = bufferThread.bufferedVideoIndex;
 			final BooleanHolder isSetHeader = new BooleanHolder(false);
+			startReceive(0);
 			if (bufferedVideoIndex == videoIndex) {
 				if (range == null || (range != null && range.indexOf("0-") != -1)) {
 					for (Map.Entry<String, String> entry : bufferThread.headers.entrySet()) {
@@ -54,7 +55,14 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 					response.setStatus(bufferThread.statusCode);
 					isSetHeader.value = true;
 					logger.info("read buffer data " + videoIndex);
-					IOUtils.write(bufferedBytes, response.getOutputStream());
+					int n = 0;
+					InputStream input = new ByteArrayInputStream(bufferedBytes);
+					byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+					while (-1 != (n = input.read(buffer))) {
+						response.getOutputStream().write(buffer, 0, n);
+						received(videoIndex, n);
+					}
+					input.close();
 					logger.info("write buffer data complete " + videoIndex);
 					// 跳过缓冲区中的数据
 					headers.put(HttpHeader.RANGE.asString(),
@@ -115,6 +123,16 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			try {
 				Thread.sleep(50);
 			} catch (InterruptedException e) {
+			}
+		}
+	}
+
+	private void startReceive(int videoIndex) {
+		if (speedCallback != null) {
+			try {
+				speedCallback.startReceive(videoIndex, 1);
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 	}
