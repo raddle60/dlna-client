@@ -3,6 +3,7 @@
 **/
 var parserInfo = {
 	name : "FLVCD硕鼠",
+	sort : 100,
 	qualitys : [{key:"super",value:"超清"},
 	{key:"real",value:"原画或1080P或全高清"},
 	{key:"super2",value:"720P"},

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
@@ -31,6 +33,7 @@ import com.raddle.dlna.util.KeyValue;
 public class VideoUrlParser {
 	private static Logger logger = LoggerFactory.getLogger(VideoUrlParser.class);
 	private String name;
+	private int sort;
 	private List<KeyValue<String, String>> videoQualitys;
 	private Scriptable topScope;
 	private File scriptFile;
@@ -50,6 +53,18 @@ public class VideoUrlParser {
 				}
 				list.add(videoUrlParser);
 			}
+			Collections.sort(list, new Comparator<VideoUrlParser>() {
+
+				@Override
+				public int compare(VideoUrlParser o1, VideoUrlParser o2) {
+					if (o1.sort > o2.sort) {
+						return 1;
+					} else if (o1.sort < o2.sort) {
+						return -1;
+					}
+					return 0;
+				}
+			});
 		} else {
 			logger.error("dir[{}] not exist or not a dir", parserDir);
 		}
@@ -78,6 +93,7 @@ public class VideoUrlParser {
 		// 获取名称
 		NativeObject parserInfo = (NativeObject) topScope.get("parserInfo", topScope);
 		name = (String) parserInfo.get("name", topScope);
+		sort = ((Number) parserInfo.get("sort", topScope)).intValue();
 		// 获取清晰度
 		NativeArray qualitys = (NativeArray) parserInfo.get("qualitys", topScope);
 		videoQualitys = new ArrayList<KeyValue<String, String>>();
@@ -167,5 +183,13 @@ public class VideoUrlParser {
 
 	public File getScriptFile() {
 		return scriptFile;
+	}
+
+	public int getSort() {
+		return sort;
+	}
+
+	public void setSort(int sort) {
+		this.sort = sort;
 	}
 }

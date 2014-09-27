@@ -3,6 +3,7 @@
 **/
 var parserInfo = {
     name : "FLVXZ飞驴",
+    sort : 10,
     qualitys : [{key:"4K极清",value:"4K极清"},
     {key:"4K极致",value:"4K极致"},
     {key:"1080P",value:"1080P"},
