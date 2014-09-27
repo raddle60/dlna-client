@@ -135,12 +135,14 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 											.getPreDurationSeconds() * 1000) {
 								increasedTimestamp = true;
 							}
+							int preLastTagTimestamp = JoinItem.isUseLastTagTimestamp() ? curJoinItem.getFlvMetaInfo()
+									.getPreLastTagTimestamp() : (int) curJoinItem.getFlvMetaInfo()
+									.getPreDurationSeconds() * 1000;
 							if (!increasedTimestamp) {
-								readTagHeader.setTimestamp(curJoinItem.getFlvMetaInfo().getPreLastTagTimestamp()
-										+ readTagHeader.getTimestamp());
+								readTagHeader.setTimestamp(preLastTagTimestamp + readTagHeader.getTimestamp());
 							}
 							if (readTagHeader.getTimestamp() == 0) {
-								readTagHeader.setTimestamp(curJoinItem.getFlvMetaInfo().getPreLastTagTimestamp());
+								readTagHeader.setTimestamp(preLastTagTimestamp);
 							}
 							readTagHeader.writeTagHeader(response.getOutputStream());
 							IOUtils.copyLarge(remoteResponse.getEntity().getContent(), response.getOutputStream(), 0,
@@ -223,13 +225,15 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 														.getPreDurationSeconds() * 1000) {
 											increasedTimestamp = true;
 										}
+										int preLastTagTimestamp = JoinItem.isUseLastTagTimestamp() ? nextJoinItem
+												.getFlvMetaInfo().getPreLastTagTimestamp() : (int) nextJoinItem
+												.getFlvMetaInfo().getPreDurationSeconds() * 1000;
 										if (!increasedTimestamp) {
-											readTagHeader.setTimestamp(nextJoinItem.getFlvMetaInfo()
-													.getPreLastTagTimestamp() + readTagHeader.getTimestamp());
+											readTagHeader.setTimestamp(readTagHeader.getTimestamp()
+													+ preLastTagTimestamp);
 										}
 										if (readTagHeader.getTimestamp() == 0) {
-											readTagHeader.setTimestamp(nextJoinItem.getFlvMetaInfo()
-													.getPreLastTagTimestamp());
+											readTagHeader.setTimestamp(preLastTagTimestamp);
 										}
 										readTagHeader.writeTagHeader(response.getOutputStream());
 										IOUtils.copyLarge(remoteResponse.getEntity().getContent(),

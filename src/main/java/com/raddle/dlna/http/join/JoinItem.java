@@ -20,6 +20,15 @@ public class JoinItem {
 	private String url;
 	private FlvMetaInfo flvMetaInfo;
 
+	/**
+	 * 使用duration拼接时间，还是用最后一帧的时间戳拼接时间<br>
+	 * 会非常大的拖慢获取头信息的速度
+	 * @return
+	 */
+	public static boolean isUseLastTagTimestamp() {
+		return false;
+	}
+
 	public static JoinItem loadJoinItem(final String url, Map<Object, Object> headers) throws IOException {
 		JoinItem joinItem = (JoinItem) HttpHelper.getRemotePageWithCallback(url, headers, new HttpCallback() {
 
@@ -37,7 +46,9 @@ public class JoinItem {
 				return item;
 			}
 		});
-		FlvMetaInfo.putLastTagTimestamp(joinItem.getFlvMetaInfo(), joinItem.getUrl(), null);
+		if (isUseLastTagTimestamp()) {
+			FlvMetaInfo.putLastTagTimestamp(joinItem.getFlvMetaInfo(), joinItem.getUrl(), null);
+		}
 		return joinItem;
 	}
 
