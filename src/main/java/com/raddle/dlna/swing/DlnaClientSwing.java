@@ -132,6 +132,7 @@ public class DlnaClientSwing {
 	private JButton stopBtn2;
 	private JCheckBox localBufChk;
 	private JCheckBox localJoinChk;
+	private JButton playBtn;
 
 	/**
 	 * Launch the application.
@@ -220,7 +221,7 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(urlTxt);
 		urlTxt.setColumns(10);
 
-		JButton playBtn = new JButton("播放");
+		playBtn = new JButton("播放");
 		playBtn.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -816,6 +817,11 @@ public class DlnaClientSwing {
 		}
 	}
 
+	private void updateTitle(VideoInfo videoInfo, String extStr) {
+		frame.setTitle(videoInfo.getName() + " - " + videoInfo.getUrls().size() + "章节 - " + videoInfo.getQualityName()
+				+ StringUtils.defaultString(extStr));
+	}
+
 	private void updateMouseSpiltValue(boolean isDrag, MouseEvent e) {
 		if (isDrag) {
 			mouseDurationLeb.setText(DurationUtils.getTrackNRFormat(progressSlid.getValue()));
@@ -1001,144 +1007,166 @@ public class DlnaClientSwing {
 	}
 
 	private void playBtnAction() {
-		Device selectedDevice = getSelectedDevice();
-		if (selectedDevice == null) {
-			JOptionPane.showMessageDialog(frame, "请选择dlna设备");
-			return;
-		}
-		VideoUrlParser selectedParser = getSelectedParser();
-		if (selectedParser == null) {
-			JOptionPane.showMessageDialog(frame, "请选择地址转换器");
-			return;
-		}
-		if (qualityComb.getSelectedItem() == null) {
-			JOptionPane.showMessageDialog(frame, "请选择清晰度");
-			return;
-		}
-		String urlText = urlTxt.getText().trim();
-		if (StringUtils.isBlank(urlText)) {
-			JOptionPane.showMessageDialog(frame, "请填写视频地址");
-			return;
-		}
-		urlParseTime = null;
-		VideoInfo videoInfo = null;
-		// 网络地址
-		if (urlText.indexOf("://") != -1) {
-			try {
-				URLConnection openConnection = new URL(urlText).openConnection();
-				openConnection.connect();
-				openConnection.getInputStream().close();
-			} catch (MalformedURLException e1) {
-				logger.error(e1.getMessage(), e1);
-				JOptionPane.showMessageDialog(frame, "视频地址格式不正确");
-				return;
-			} catch (IOException e1) {
-				logger.error(e1.getMessage(), e1);
-				JOptionPane.showMessageDialog(frame, "视频地址无法访问");
-				return;
-			}
-			String baseUrlText = urlText;
-			if (baseUrlText.indexOf("#") != -1) {
-				baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("#"));
-			}
-			if (baseUrlText.indexOf("?") != -1) {
-				baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("?"));
-			}
-			if (baseUrlText.toLowerCase().substring(baseUrlText.lastIndexOf('.')).indexOf("htm") != -1
-					|| StringUtils.isBlank(FilenameUtils.getExtension(baseUrlText))) {
+		playBtn2.setEnabled(false);
+		playBtn2.setEnabled(false);
+		new Thread() {
+
+			@Override
+			public void run() {
 				try {
-					videoInfo = selectedParser.fetchVideoUrls(urlText,
-							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
-					urlParseTime = new Date();
-					if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
-						httpBufferProxyHandler.setUrls(new ArrayList<String>());
-						httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
-						ArrayList<String> list = new ArrayList<String>();
-						ArrayList<JoinItem> orgJoinItems = new ArrayList<JoinItem>();
-						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
-							String videoUrl = videoInfo.getUrls().get(i);
-							httpBufferProxyHandler.getUrls().add(videoUrl);
-							if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
-								// 获取头信息
-								try {
-									JoinItem loadJoinItem = JoinItem.loadJoinItem(videoUrl, null);
-									if (loadJoinItem.getFlvMetaInfo().getFlvHeader() == null) {
-										JOptionPane.showMessageDialog(frame, "获得视频头信息失败, 不是flv视频");
-										return;
+					Device selectedDevice = getSelectedDevice();
+					if (selectedDevice == null) {
+						JOptionPane.showMessageDialog(frame, "请选择dlna设备");
+						return;
+					}
+					VideoUrlParser selectedParser = getSelectedParser();
+					if (selectedParser == null) {
+						JOptionPane.showMessageDialog(frame, "请选择地址转换器");
+						return;
+					}
+					if (qualityComb.getSelectedItem() == null) {
+						JOptionPane.showMessageDialog(frame, "请选择清晰度");
+						return;
+					}
+					String urlText = urlTxt.getText().trim();
+					if (StringUtils.isBlank(urlText)) {
+						JOptionPane.showMessageDialog(frame, "请填写视频地址");
+						return;
+					}
+					urlParseTime = null;
+					VideoInfo videoInfo = null;
+					// 网络地址
+					if (urlText.indexOf("://") != -1) {
+						frame.setTitle("正在检测url是否可以访问");
+						try {
+							URLConnection openConnection = new URL(urlText).openConnection();
+							openConnection.connect();
+							openConnection.getInputStream().close();
+						} catch (MalformedURLException e1) {
+							logger.error(e1.getMessage(), e1);
+							JOptionPane.showMessageDialog(frame, "视频地址格式不正确");
+							return;
+						} catch (IOException e1) {
+							logger.error(e1.getMessage(), e1);
+							JOptionPane.showMessageDialog(frame, "视频地址无法访问");
+							return;
+						}
+						String baseUrlText = urlText;
+						if (baseUrlText.indexOf("#") != -1) {
+							baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("#"));
+						}
+						if (baseUrlText.indexOf("?") != -1) {
+							baseUrlText = baseUrlText.substring(0, baseUrlText.indexOf("?"));
+						}
+						if (baseUrlText.toLowerCase().substring(baseUrlText.lastIndexOf('.')).indexOf("htm") != -1
+								|| StringUtils.isBlank(FilenameUtils.getExtension(baseUrlText))) {
+							try {
+								frame.setTitle("正在解析视频地址");
+								videoInfo = selectedParser.fetchVideoUrls(urlText, selectedParser
+										.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
+								urlParseTime = new Date();
+								if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
+									httpBufferProxyHandler.setUrls(new ArrayList<String>());
+									httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
+									ArrayList<String> list = new ArrayList<String>();
+									ArrayList<JoinItem> orgJoinItems = new ArrayList<JoinItem>();
+									for (int i = 0; i < videoInfo.getUrls().size(); i++) {
+										String videoUrl = videoInfo.getUrls().get(i);
+										httpBufferProxyHandler.getUrls().add(videoUrl);
+										if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
+											// 获取头信息
+											try {
+												updateTitle(videoInfo, " , 获取文件Meta信息 " + (i + 1) + "/"
+														+ videoInfo.getUrls().size());
+												JoinItem loadJoinItem = JoinItem.loadJoinItem(videoUrl, null);
+												if (loadJoinItem.getFlvMetaInfo().getFlvHeader() == null) {
+													JOptionPane.showMessageDialog(frame, "获得视频头信息失败, 不是flv视频");
+													return;
+												}
+												orgJoinItems.add(loadJoinItem);
+											} catch (Exception e) {
+												logger.error(e.getMessage(), e);
+												JOptionPane.showMessageDialog(frame, "获得视频头信息失败, " + e.getMessage());
+												return;
+											}
+										} else {
+											list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
+													+ "/remote/" + i);
+										}
 									}
-									orgJoinItems.add(loadJoinItem);
-								} catch (Exception e) {
-									logger.error(e.getMessage(), e);
-									JOptionPane.showMessageDialog(frame, "获得视频头信息失败, " + e.getMessage());
-									return;
+									if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
+										list.clear();
+										list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
+												+ "/remote/join");
+										httpJoinProxyHandler.setJoinItems(JoinItem.joinVideo(orgJoinItems));
+										httpJoinProxyHandler.setSpeedCallback(new SpeedCallback());
+									}
+									videoInfo.setUrls(list);
 								}
+							} catch (Exception e1) {
+								logger.error(e1.getMessage(), e1);
+								JOptionPane.showMessageDialog(frame, "转换视频地址异常，" + e1.getMessage());
+								return;
+							}
+						} else {
+							videoInfo = new VideoInfo();
+							videoInfo.setName(FilenameUtils.getBaseName(urlText));
+							videoInfo.setQualityName("视频链接");
+							videoInfo.setUrls(new ArrayList<String>());
+							if (localBufChk.isSelected()) {
+								httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
+								httpBufferProxyHandler.setUrls(new ArrayList<String>());
+								httpBufferProxyHandler.getUrls().add(urlText);
+								videoInfo.getUrls().add(
+										"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/"
+												+ 0);
 							} else {
-								list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
-										+ "/remote/" + i);
+								videoInfo.getUrls().add(urlText);
 							}
 						}
-						if (localJoinChk.isSelected() && videoInfo.getUrls().size() > 1) {
-							list.clear();
-							list.add("http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT
-									+ "/remote/join");
-							httpJoinProxyHandler.setJoinItems(JoinItem.joinVideo(orgJoinItems));
-							httpJoinProxyHandler.setSpeedCallback(new SpeedCallback());
+					} else {
+						// 本地路径
+						File file = new File(urlText);
+						if (!file.exists()) {
+							JOptionPane.showMessageDialog(frame, "文件不存在，" + file.getAbsolutePath());
+							return;
 						}
-						videoInfo.setUrls(list);
+						videoInfo = new VideoInfo();
+						videoInfo.setName(FilenameUtils.getBaseName(urlText));
+						videoInfo.setQualityName("本地视频");
+						videoInfo.setUrls(new ArrayList<String>());
+						String videoName = DigestUtils.shaHex(file.getAbsolutePath()) + "."
+								+ FilenameUtils.getExtension(urlText);
+						videoInfo.getUrls().add(
+								"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/file/"
+										+ videoName);
+						localFileHttpHandler.setLocalFile(file);
+						localFileHttpHandler.setSpeedCallback(new SpeedCallback());
 					}
-				} catch (Exception e1) {
-					logger.error(e1.getMessage(), e1);
-					JOptionPane.showMessageDialog(frame, "转换视频地址异常，" + e1.getMessage());
-					return;
+					if (videoInfo != null) {
+						updateTitle(videoInfo, " - 开始播放");
+						playList = new ArrayList<PlayListItem>();
+						for (String url : videoInfo.getUrls()) {
+							playList.add(new PlayListItem(videoInfo, url));
+						}
+						if (StringUtils.equals(curUrl, urlText)) {
+							play(curVideoIndex);
+						} else {
+							play(0);
+						}
+						curUrl = urlText;
+					} else {
+						logger.error("videoInfo is null");
+						JOptionPane.showMessageDialog(frame, "转换视频地址失败");
+						return;
+					}
+				} finally {
+					playBtn2.setEnabled(true);
+					playBtn2.setEnabled(true);
 				}
-			} else {
-				videoInfo = new VideoInfo();
-				videoInfo.setName(FilenameUtils.getBaseName(urlText));
-				videoInfo.setQualityName("视频链接");
-				videoInfo.setUrls(new ArrayList<String>());
-				if (localBufChk.isSelected()) {
-					httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
-					httpBufferProxyHandler.setUrls(new ArrayList<String>());
-					httpBufferProxyHandler.getUrls().add(urlText);
-					videoInfo.getUrls().add(
-							"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/remote/" + 0);
-				} else {
-					videoInfo.getUrls().add(urlText);
-				}
 			}
-		} else {
-			// 本地路径
-			File file = new File(urlText);
-			if (!file.exists()) {
-				JOptionPane.showMessageDialog(frame, "文件不存在，" + file.getAbsolutePath());
-				return;
-			}
-			videoInfo = new VideoInfo();
-			videoInfo.setName(FilenameUtils.getBaseName(urlText));
-			videoInfo.setQualityName("本地视频");
-			videoInfo.setUrls(new ArrayList<String>());
-			String videoName = DigestUtils.shaHex(file.getAbsolutePath()) + "." + FilenameUtils.getExtension(urlText);
-			videoInfo.getUrls().add(
-					"http://" + localIpComb.getSelectedItem() + ":" + HTTP_SERVER_PORT + "/file/" + videoName);
-			localFileHttpHandler.setLocalFile(file);
-			localFileHttpHandler.setSpeedCallback(new SpeedCallback());
-		}
-		if (videoInfo != null) {
-			playList = new ArrayList<PlayListItem>();
-			for (String url : videoInfo.getUrls()) {
-				playList.add(new PlayListItem(videoInfo, url));
-			}
-			if (StringUtils.equals(curUrl, urlText)) {
-				play(curVideoIndex);
-			} else {
-				play(0);
-			}
-			curUrl = urlText;
-		} else {
-			logger.error("videoInfo is null");
-			JOptionPane.showMessageDialog(frame, "转换视频地址失败");
-			return;
-		}
+
+		}.start();
 	}
 
 	private void stopBtnAction() {
