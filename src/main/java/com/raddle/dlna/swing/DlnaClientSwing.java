@@ -700,16 +700,16 @@ public class DlnaClientSwing {
 									for (String url : videoInfo.getUrls()) {
 										newPlayList.add(new PlayListItem(videoInfo, url));
 									}
-									playList = newPlayList;
-									if (localBufChk.isSelected()) {
-										httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
-										if (httpJoinProxyHandler.getJoinItems() != null && localJoinChk.isSelected()
-												&& videoInfo.getUrls().size() > 1) {
-											for (int i = 0; i < videoInfo.getUrls().size(); i++) {
-												httpJoinProxyHandler.getJoinItems().get(i)
-														.setUrl(videoInfo.getUrls().get(i));
-											}
+									if (httpJoinProxyHandler.getJoinItems() != null && localJoinChk.isSelected()
+											&& videoInfo.getUrls().size() > 1) {
+										for (int i = 0; i < videoInfo.getUrls().size(); i++) {
+											httpJoinProxyHandler.getJoinItems().get(i)
+													.setUrl(videoInfo.getUrls().get(i));
 										}
+									} else if (localBufChk.isSelected()) {
+										httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
+									} else {
+										playList = newPlayList;
 									}
 								} catch (Exception e1) {
 									logger.error(e1.getMessage(), e1);
