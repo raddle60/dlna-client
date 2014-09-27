@@ -22,7 +22,7 @@ public class JoinItem {
 
 	/**
 	 * 使用duration拼接时间，还是用最后一帧的时间戳拼接时间<br>
-	 * 会非常大的拖慢获取头信息的速度
+	 * 用最后一帧的时间戳拼接时间，因为要跳到最后一帧，会非常大的拖慢获取头信息的速度
 	 * @return
 	 */
 	public static boolean isUseLastTagTimestamp() {
