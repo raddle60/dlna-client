@@ -136,9 +136,11 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 								increasedTimestamp = true;
 							}
 							if (!increasedTimestamp) {
-								readTagHeader
-										.setTimestamp((int) (curJoinItem.getFlvMetaInfo().getPreDurationSeconds() * 1000)
-												+ readTagHeader.getTimestamp());
+								readTagHeader.setTimestamp(curJoinItem.getFlvMetaInfo().getPreLastTagTimestamp()
+										+ readTagHeader.getTimestamp());
+							}
+							if (readTagHeader.getTimestamp() == 0) {
+								readTagHeader.setTimestamp(curJoinItem.getFlvMetaInfo().getPreLastTagTimestamp());
 							}
 							readTagHeader.writeTagHeader(response.getOutputStream());
 							IOUtils.copyLarge(remoteResponse.getEntity().getContent(), response.getOutputStream(), 0,
@@ -222,8 +224,12 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 											increasedTimestamp = true;
 										}
 										if (!increasedTimestamp) {
-											readTagHeader.setTimestamp((int) (nextJoinItem.getFlvMetaInfo()
-													.getPreDurationSeconds() * 1000) + readTagHeader.getTimestamp());
+											readTagHeader.setTimestamp(nextJoinItem.getFlvMetaInfo()
+													.getPreLastTagTimestamp() + readTagHeader.getTimestamp());
+										}
+										if (readTagHeader.getTimestamp() == 0) {
+											readTagHeader.setTimestamp(nextJoinItem.getFlvMetaInfo()
+													.getPreLastTagTimestamp());
 										}
 										readTagHeader.writeTagHeader(response.getOutputStream());
 										IOUtils.copyLarge(remoteResponse.getEntity().getContent(),

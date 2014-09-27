@@ -2,14 +2,23 @@ package com.raddle.dlna.video.flv;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.eclipse.jetty.http.HttpHeader;
 
+import com.raddle.dlna.http.HttpCallback;
+import com.raddle.dlna.http.HttpHelper;
 import com.raddle.dlna.video.flv.tag.TagHeader;
 import com.raddle.dlna.video.flv.tag.script.ScriptDataDouble;
 import com.raddle.dlna.video.flv.tag.script.ScriptTagBody;
@@ -24,6 +33,8 @@ public class FlvMetaInfo {
 	private long preFileLength;
 	private long joinIncrLength;
 	private double preDurationSeconds;
+	private int preLastTagTimestamp;
+	private int lastTagTimestamp;
 	private FlvHeader flvHeader;
 	private TagHeader scriptTagHeader;
 	private ScriptTagBody scriptTagBody;
@@ -66,7 +77,9 @@ public class FlvMetaInfo {
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			writeFlvMetaInfo(os);
 			InputStream is = new ByteArrayInputStream(os.toByteArray());
-			return readFlvMetaInfo(fileLength, is);
+			FlvMetaInfo readFlvMetaInfo = readFlvMetaInfo(fileLength, is);
+			readFlvMetaInfo.setLastTagTimestamp(lastTagTimestamp);
+			return readFlvMetaInfo;
 		} catch (IOException e) {
 			throw new RuntimeException(e.getMessage(), e);
 		}
@@ -77,6 +90,58 @@ public class FlvMetaInfo {
 		TagHeader readTagHeaderForMeta = TagHeader.readTagHeader(inputStream);
 		ScriptTagBody readScriptTagBody = ScriptTagBody.readScriptTagBody(readTagHeaderForMeta, inputStream);
 		return new FlvMetaInfo(fileLength, readFlvHeader, readTagHeaderForMeta, readScriptTagBody);
+	}
+
+	public static void putLastTagTimestamp(FlvMetaInfo flvMetaInfo, File file) throws IOException {
+		List<ScriptDataDouble> filepositions = flvMetaInfo.getScriptTagBody().getFilepositions();
+		double lastPos = filepositions.get(filepositions.size() - 1).getValue();
+		FileInputStream fileInputStream = new FileInputStream(file);
+		fileInputStream.skip((long) lastPos);
+		TagHeader readTagHeader = TagHeader.readTagHeader(fileInputStream);
+		TagHeader lastTagHeader = null;
+		while (readTagHeader != null) {
+			if (readTagHeader.getTagType() != 8 && readTagHeader.getTagType() != 9) {
+				throw new RuntimeException(readTagHeader.getTagType() + " is not video or audio type");
+			}
+			lastTagHeader = readTagHeader;
+			fileInputStream.skip(readTagHeader.getDataLength() + 4);
+			readTagHeader = TagHeader.readTagHeader(fileInputStream);
+		}
+		fileInputStream.close();
+		flvMetaInfo.setLastTagTimestamp(lastTagHeader.getTimestamp());
+	}
+
+	public static void putLastTagTimestamp(final FlvMetaInfo flvMetaInfo, String httpUrl, Map<Object, Object> headers)
+			throws IOException {
+		List<ScriptDataDouble> filepositions = flvMetaInfo.getScriptTagBody().getFilepositions();
+		double lastPos = filepositions.get(filepositions.size() - 1).getValue();
+		if (headers == null) {
+			headers = new HashMap<Object, Object>();
+		}
+		headers.put(HttpHeader.RANGE.asString(), "bytes=" + new DecimalFormat("#").format(lastPos) + "-");
+		HttpHelper.getRemotePageWithCallback(httpUrl, headers, new HttpCallback() {
+
+			@Override
+			public Object httpResponse(CloseableHttpResponse response) {
+				try {
+					TagHeader readTagHeader = TagHeader.readTagHeader(response.getEntity().getContent());
+					TagHeader lastTagHeader = null;
+					while (readTagHeader != null) {
+						if (readTagHeader.getTagType() != 8 && readTagHeader.getTagType() != 9) {
+							throw new RuntimeException(readTagHeader.getTagType() + " is not video or audio type");
+						}
+						lastTagHeader = readTagHeader;
+						IOUtils.skip(response.getEntity().getContent(), readTagHeader.getDataLength() + 4);
+						readTagHeader = TagHeader.readTagHeader(response.getEntity().getContent());
+					}
+					flvMetaInfo.setLastTagTimestamp(lastTagHeader.getTimestamp());
+					response.close();
+				} catch (Exception e) {
+					throw new RuntimeException(e.getMessage(), e);
+				}
+				return null;
+			}
+		});
 	}
 
 	/**
@@ -158,9 +223,11 @@ public class FlvMetaInfo {
 			toJoinMetaInfo.setPreDurationSeconds(currentDurationSeconds);
 			joinedMetaInfo.getScriptTagBody().getTimes().add(new ScriptDataDouble(newTime));
 		}
+		int currentLastTimestamp = getCurrentLastTimestamp(orgMetaInfo, startTime >= currentDurationSeconds, index);
+		toJoinMetaInfo.setPreLastTagTimestamp(currentLastTimestamp);
 	}
 
-	public static long getCurrentTagPos(List<FlvMetaInfo> orgMetaInfo, int index) {
+	private static long getCurrentTagPos(List<FlvMetaInfo> orgMetaInfo, int index) {
 		long fileLength = 0;
 		for (int i = 0; i < index; i++) {
 			if (i == 0) {
@@ -172,12 +239,24 @@ public class FlvMetaInfo {
 		return fileLength;
 	}
 
-	public static double getCurrentDurationSeconds(List<FlvMetaInfo> orgMetaInfo, int index) {
+	private static double getCurrentDurationSeconds(List<FlvMetaInfo> orgMetaInfo, int index) {
 		double durationSeconds = 0;
 		for (int i = 0; i < index; i++) {
 			durationSeconds += orgMetaInfo.get(i).getDurationSeconds();
 		}
 		return durationSeconds;
+	}
+
+	private static int getCurrentLastTimestamp(List<FlvMetaInfo> orgMetaInfo, boolean isAdded, int index) {
+		if (isAdded) {
+			// 已经加过，不需要累加
+			return 0;
+		}
+		int timestamp = 0;
+		for (int i = 0; i < index; i++) {
+			timestamp += orgMetaInfo.get(i).getLastTagTimestamp();
+		}
+		return timestamp;
 	}
 
 	public FlvHeader getFlvHeader() {
@@ -218,6 +297,22 @@ public class FlvMetaInfo {
 
 	public void setJoinIncrLength(long joinIncrLength) {
 		this.joinIncrLength = joinIncrLength;
+	}
+
+	public int getLastTagTimestamp() {
+		return lastTagTimestamp;
+	}
+
+	public void setLastTagTimestamp(int lastTagTimestamp) {
+		this.lastTagTimestamp = lastTagTimestamp;
+	}
+
+	public int getPreLastTagTimestamp() {
+		return preLastTagTimestamp;
+	}
+
+	public void setPreLastTagTimestamp(int preLastTagTimestamp) {
+		this.preLastTagTimestamp = preLastTagTimestamp;
 	}
 
 }

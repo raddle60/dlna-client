@@ -21,7 +21,7 @@ public class JoinItem {
 	private FlvMetaInfo flvMetaInfo;
 
 	public static JoinItem loadJoinItem(final String url, Map<Object, Object> headers) throws IOException {
-		return (JoinItem) HttpHelper.getRemotePageWithCallback(url, headers, new HttpCallback() {
+		JoinItem joinItem = (JoinItem) HttpHelper.getRemotePageWithCallback(url, headers, new HttpCallback() {
 
 			@Override
 			public Object httpResponse(CloseableHttpResponse remoteResponse) {
@@ -37,6 +37,8 @@ public class JoinItem {
 				return item;
 			}
 		});
+		FlvMetaInfo.putLastTagTimestamp(joinItem.getFlvMetaInfo(), joinItem.getUrl(), null);
+		return joinItem;
 	}
 
 	public static List<JoinItem> joinVideo(List<JoinItem> orgJoinItems) {
