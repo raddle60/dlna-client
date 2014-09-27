@@ -132,7 +132,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 							}
 							if (readTagHeader.getTimestamp() > 0
 									&& readTagHeader.getTimestamp() >= curJoinItem.getFlvMetaInfo()
-											.getPreDurationSeconds()) {
+											.getPreDurationSeconds() * 1000) {
 								increasedTimestamp = true;
 							}
 							if (!increasedTimestamp) {
@@ -218,7 +218,7 @@ public class RemoteJoinHttpProxyHandler extends AbstractHandler {
 										}
 										if (readTagHeader.getTimestamp() > 0
 												&& readTagHeader.getTimestamp() >= nextJoinItem.getFlvMetaInfo()
-														.getPreDurationSeconds()) {
+														.getPreDurationSeconds() * 1000) {
 											increasedTimestamp = true;
 										}
 										if (!increasedTimestamp) {
