@@ -133,6 +133,8 @@ public class DlnaClientSwing {
 	private JCheckBox localBufChk;
 	private JCheckBox localJoinChk;
 	private JButton playBtn;
+	private JCheckBox autoChk;
+	private JCheckBox refreshUrlChk;
 
 	/**
 	 * Launch the application.
@@ -500,6 +502,7 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(stopBtn2);
 
 		localBufChk = new JCheckBox("本地缓冲");
+		localBufChk.setEnabled(false);
 		localBufChk.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -512,14 +515,31 @@ public class DlnaClientSwing {
 		frame.getContentPane().add(localBufChk);
 
 		localJoinChk = new JCheckBox("本地拼接");
+		localJoinChk.setEnabled(false);
 		localJoinChk.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				localBufChk.setSelected(localJoinChk.isSelected());
 			}
 		});
-		localJoinChk.setBounds(492, 6, 132, 23);
+		localJoinChk.setBounds(492, 6, 87, 23);
 		frame.getContentPane().add(localJoinChk);
+
+		autoChk = new JCheckBox("自动识别");
+		autoChk.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				localBufChk.setEnabled(!autoChk.isSelected());
+				localJoinChk.setEnabled(!autoChk.isSelected());
+			}
+		});
+		autoChk.setSelected(true);
+		autoChk.setBounds(581, 6, 102, 23);
+		frame.getContentPane().add(autoChk);
+
+		refreshUrlChk = new JCheckBox("定时重新解析地址");
+		refreshUrlChk.setBounds(580, 35, 140, 23);
+		frame.getContentPane().add(refreshUrlChk);
 		///
 		dlnaEventParser = new DlnaEventParser();
 		dlnaEventParser.init(new File("dlna/event.js"));
@@ -686,37 +706,7 @@ public class DlnaClientSwing {
 
 					@Override
 					public void run() {
-						if (stopBtn.isEnabled() && progressSlid.isEnabled() && hasPlaying && urlParseTime != null
-								&& playList != null && playList.size() > 0) {
-							// 已过15分钟，重新获取url
-							if (DateUtils.addMinutes(urlParseTime, 15).before(new Date())) {
-								try {
-									VideoUrlParser selectedParser = getSelectedParser();
-									String urlText = urlTxt.getText().trim();
-									VideoInfo videoInfo = selectedParser.fetchVideoUrls(urlText, selectedParser
-											.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
-									urlParseTime = new Date();
-									List<PlayListItem> newPlayList = new ArrayList<PlayListItem>();
-									for (String url : videoInfo.getUrls()) {
-										newPlayList.add(new PlayListItem(videoInfo, url));
-									}
-									if (httpJoinProxyHandler.getJoinItems() != null && localJoinChk.isSelected()
-											&& videoInfo.getUrls().size() > 1) {
-										for (int i = 0; i < videoInfo.getUrls().size(); i++) {
-											httpJoinProxyHandler.getJoinItems().get(i)
-													.setUrl(videoInfo.getUrls().get(i));
-										}
-									} else if (localBufChk.isSelected()) {
-										httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
-									} else {
-										playList = newPlayList;
-									}
-								} catch (Exception e1) {
-									logger.error(e1.getMessage(), e1);
-									return;
-								}
-							}
-						}
+						refreshUrls();
 					}
 				}, 5, 60, TimeUnit.SECONDS);
 				server = new Server(HTTP_SERVER_PORT);
@@ -1065,6 +1055,22 @@ public class DlnaClientSwing {
 								videoInfo = selectedParser.fetchVideoUrls(urlText, selectedParser
 										.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
 								urlParseTime = new Date();
+								// 自动检测是否需要或缓冲
+								if (autoChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
+									updateTitle(videoInfo, " , 正在识别视频格式");
+									if (videoInfo.getUrls().size() == 1) {
+										// 单视频不需要拼接
+										localBufChk.setSelected(false);
+										localJoinChk.setSelected(false);
+									} else if (videoInfo.getUrls().size() > 1) {
+										JoinItem loadJoinItem = JoinItem.loadJoinItem(videoInfo.getUrls().get(0), null);
+										if (loadJoinItem.getFlvMetaInfo().getFlvHeader() != null) {
+											// flv的多视频自动拼接
+											localBufChk.setSelected(true);
+											localJoinChk.setSelected(true);
+										}
+									}
+								}
 								if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
 									httpBufferProxyHandler.setUrls(new ArrayList<String>());
 									httpBufferProxyHandler.setSpeedCallback(new SpeedCallback());
@@ -1193,6 +1199,39 @@ public class DlnaClientSwing {
 		}
 	}
 
+	private void refreshUrls() {
+		if (stopBtn.isEnabled() && progressSlid.isEnabled() && hasPlaying && urlParseTime != null && playList != null
+				&& playList.size() > 0 && refreshUrlChk.isSelected()) {
+			// 已过15分钟，重新获取url
+			if (DateUtils.addMinutes(urlParseTime, 15).before(new Date())) {
+				try {
+					VideoUrlParser selectedParser = getSelectedParser();
+					String urlText = urlTxt.getText().trim();
+					VideoInfo videoInfo = selectedParser.fetchVideoUrls(urlText,
+							selectedParser.getVideoQualityByValue(qualityComb.getSelectedItem() + "").getKey());
+					urlParseTime = new Date();
+					List<PlayListItem> newPlayList = new ArrayList<PlayListItem>();
+					for (String url : videoInfo.getUrls()) {
+						newPlayList.add(new PlayListItem(videoInfo, url));
+					}
+					if (httpJoinProxyHandler.getJoinItems() != null && localJoinChk.isSelected()
+							&& videoInfo.getUrls().size() > 1) {
+						for (int i = 0; i < videoInfo.getUrls().size(); i++) {
+							httpJoinProxyHandler.getJoinItems().get(i).setUrl(videoInfo.getUrls().get(i));
+						}
+					} else if (localBufChk.isSelected()) {
+						httpBufferProxyHandler.setUrls(new ArrayList<String>(videoInfo.getUrls()));
+					} else {
+						playList = newPlayList;
+					}
+				} catch (Exception e1) {
+					logger.error(e1.getMessage(), e1);
+					return;
+				}
+			}
+		}
+	}
+
 	private class SpeedCallback implements ReceiveSpeedCallback {
 		private long preTime = -1;
 		private long speedReceived = 0;
@@ -1257,5 +1296,5 @@ public class DlnaClientSwing {
 			}
 		}
 
-	};
+	}
 }
