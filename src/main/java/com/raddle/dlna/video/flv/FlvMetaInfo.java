@@ -87,8 +87,14 @@ public class FlvMetaInfo {
 
 	public static FlvMetaInfo readFlvMetaInfo(long fileLength, InputStream inputStream) throws IOException {
 		FlvHeader readFlvHeader = FlvHeader.readFlvHeader(inputStream);
-		TagHeader readTagHeaderForMeta = TagHeader.readTagHeader(inputStream);
-		ScriptTagBody readScriptTagBody = ScriptTagBody.readScriptTagBody(readTagHeaderForMeta, inputStream);
+		TagHeader readTagHeaderForMeta = null;
+		ScriptTagBody readScriptTagBody = null;
+		if (readFlvHeader != null) {
+			readTagHeaderForMeta = TagHeader.readTagHeader(inputStream);
+			if (readTagHeaderForMeta != null) {
+				readScriptTagBody = ScriptTagBody.readScriptTagBody(readTagHeaderForMeta, inputStream);
+			}
+		}
 		return new FlvMetaInfo(fileLength, readFlvHeader, readTagHeaderForMeta, readScriptTagBody);
 	}
 
