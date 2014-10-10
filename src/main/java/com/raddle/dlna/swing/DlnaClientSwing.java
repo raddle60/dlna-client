@@ -1068,6 +1068,9 @@ public class DlnaClientSwing {
 											// flv的多视频自动拼接
 											localBufChk.setSelected(true);
 											localJoinChk.setSelected(true);
+										} else {
+											localBufChk.setSelected(false);
+											localJoinChk.setSelected(false);
 										}
 									}
 								}
