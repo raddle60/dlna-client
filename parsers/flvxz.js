@@ -10,12 +10,10 @@ var parserInfo = {
     {key:"720P",value:"720P"},
     {key:"原画",value:"原画"},
     {key:"超清",value:"超清"},
-    {key:"高清MP4",value:"高清MP4"},
-    {key:"高清FLV",value:"高清FLV"},
     {key:"高清",value:"高清"},
     {key:"普清",value:"普清"},
-    {key:"FLV标清",value:"FLV标清"},
     {key:"标清",value:"标清"},
+    {key:"低清",value:"低清"},
     {key:"流畅",value:"流畅"},
     {key:"极速",value:"极速"}
     ]
@@ -81,14 +79,47 @@ function fetchVideoUrls(url,videoQuality){
             continue;
         }
     }
+    for(var qname in qualityInfo){
+            logger.info(qname);
+    }
     var start = false;
     for(var i=0; i < parserInfo.qualitys.length ; i++){
         if(parserInfo.qualitys[i].key == videoQuality){
             start = true;
         }
-        if(start && qualityInfo[parserInfo.qualitys[i].key] != null && qualityInfo[parserInfo.qualitys[i].key].length > 0){
-            return {name:videoName,urls:qualityInfo[parserInfo.qualitys[i].key],qualityName:parserInfo.qualitys[i].value};
+        if(start){
+            var ret = findVideo(qualityInfo,parserInfo.qualitys[i].key,"单段");
+            if(ret != null){
+                ret.name = videoName;
+                return ret;            
+            }
+            ret = findVideo(qualityInfo,parserInfo.qualitys[i].key,"FLV");
+            if(ret != null){
+                ret.name = videoName;
+                return ret;            
+            }
+            ret = findVideo(qualityInfo,parserInfo.qualitys[i].key,null);
+            if(ret != null){
+                ret.name = videoName;
+                return ret;            
+            }
         }
     }
     return null;
 }
+function findVideo(qualityInfo,videoQua,keyword){
+    for(var qname in qualityInfo){
+        if(qname.indexOf(videoQua) != -1 && qualityInfo[qname] != null && qualityInfo[qname].length > 0){
+            if(keyword != null){
+                if(qname.indexOf(keyword) != -1){
+                    return {urls:qualityInfo[qname],qualityName:qname};
+                }
+            } else {
+                return {urls:qualityInfo[qname],qualityName:qname};
+            }
+        }
+    }
+    return null;
+}
+
+
