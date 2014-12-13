@@ -27,9 +27,9 @@ function fetchVideoUrls(url,videoQuality){
     if(url.indexOf("#") != -1){
         encodedUrl = url.substring(0,url.indexOf("#"));
     }
-    if(encodedUrl.indexOf("?") != -1){
-        encodedUrl = encodedUrl.substring(0,encodedUrl.indexOf("?"));
-    }
+    //if(encodedUrl.indexOf("?") != -1){
+    //    encodedUrl = encodedUrl.substring(0,encodedUrl.indexOf("?"));
+    //}
     encodedUrl = encodedUrl.replace("://",":##");
     encodedUrl = videoUrlParser.toBase64String(encodedUrl,"gbk") + "";
     encodedUrl = encodedUrl.replace("+","-");
