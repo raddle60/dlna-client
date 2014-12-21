@@ -34,9 +34,9 @@ function fetchVideoUrls(url,videoQuality){
     encodedUrl = videoUrlParser.toBase64String(encodedUrl,"gbk") + "";
     encodedUrl = encodedUrl.replace("+","-");
     encodedUrl = encodedUrl.replace("/","_");
-    var parseUrl = "https://www.flvxz.com/getFlv.php?url=" + encodedUrl;
+    var parseUrl = "http://flv.cn/getFlv.php?url=" + encodedUrl;
     // 解析地址
-    var content = httpclient.getRemotePage(parseUrl,"gbk", {"Referer":"https://www.flvxz.com/"});
+    var content = httpclient.getRemotePage(parseUrl,"gbk", {"Referer":"http://flv.cn/"});
     var videoName = "名称未知";
     var matchedVideoName = content.match(new RegExp("<h4 class=\"media-heading\">([^<>]+)</h4>"));
     if(matchedVideoName != null && matchedVideoName.length > 1){
