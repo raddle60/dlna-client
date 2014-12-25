@@ -80,7 +80,7 @@ public class VideoUrlParser {
 			context = Context.enter();
 		}
 		topScope = context.initStandardObjects();
-		ScriptableObject.putProperty(topScope, "logger", LoggerFactory.getLogger(scriptFile.getName()));
+		ScriptableObject.putProperty(topScope, "logger", LoggerFactory.getLogger(scriptFile.getName().replace('.', '_')));
 		ScriptableObject.putProperty(topScope, "httpclient", new HttpHelper());
 		ScriptableObject.putProperty(topScope, "videoUrlParser", this);
 		this.scriptFile = scriptFile;

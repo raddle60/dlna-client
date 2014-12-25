@@ -66,6 +66,7 @@ import com.raddle.dlna.http.ReceiveSpeedCallback;
 import com.raddle.dlna.http.RemoteHttpProxyHandler;
 import com.raddle.dlna.http.RemoteJoinHttpProxyHandler;
 import com.raddle.dlna.http.join.JoinItem;
+import com.raddle.dlna.local.LocalProcesser;
 import com.raddle.dlna.renderer.AVTransport;
 import com.raddle.dlna.renderer.MediaRenderer;
 import com.raddle.dlna.url.parser.VideoInfo;
@@ -89,6 +90,7 @@ public class DlnaClientSwing {
 	private ControlPoint ctrlPoint;
 	private Server server;
 	private DlnaEventParser dlnaEventParser;
+	private LocalProcesser localProcesser;
 	private List<VideoUrlParser> videoUrlParsers;
 	private List<PlayListItem> playList;
 	private int curVideoIndex = 0;
@@ -543,6 +545,9 @@ public class DlnaClientSwing {
 		///
 		dlnaEventParser = new DlnaEventParser();
 		dlnaEventParser.init(new File("dlna/event.js"));
+		//
+		localProcesser = new LocalProcesser(); 
+		localProcesser.init(new File("local/local.js"));
 		///
 		updateUrlParsers();
 		///
@@ -1073,6 +1078,15 @@ public class DlnaClientSwing {
 											localJoinChk.setSelected(false);
 										}
 									}
+								}
+								// 通过脚本再次判断
+								Boolean localBuffer = localProcesser.isLocalBuffer(urlText);
+								if (localBuffer != null) {
+									localBufChk.setSelected(localBuffer);
+								}
+								Boolean localJoin = localProcesser.isLocalJoin(urlText);
+								if (localJoin != null) {
+									localJoinChk.setSelected(localJoin);
 								}
 								if (localBufChk.isSelected() && videoInfo != null && videoInfo.getUrls() != null) {
 									httpBufferProxyHandler.setUrls(new ArrayList<String>());
