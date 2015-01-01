@@ -55,7 +55,7 @@ function fetchVideoUrls(url,videoQuality){
 		}
     }
     // 视频地址
-    var videoUrlRegex =  new RegExp("(>\\[[^\\[\\]]+\\]<)|(<a rel=\"noreferrer\" href=\"[^\"]+\">)","g");
+    var videoUrlRegex =  new RegExp("(>\\[[^\\[\\]]+\\]<)|(rel=\"noreferrer\" href=\"[^\"]+\">)","g");
     var videoUrls = content.match(videoUrlRegex);
     var qualityName = "";
     var qualityInfo = {};
@@ -66,8 +66,12 @@ function fetchVideoUrls(url,videoQuality){
             qualityInfo[qualityName] = [];
             continue;
         }
-        if(videoUrls[i].charAt(0) == '<'){
+        if(videoUrls[i].charAt(0) == 'r'){
             var videoUrl = videoUrls[i].match(new RegExp("href=\"([^\"]+)\">"))[1];
+            if(videoUrl.indexOf("flvxz.com") != -1 || videoUrl.indexOf("flv.cn") !=-1){
+                // 预览和下载
+                continue;
+            }
             if(videoUrl.indexOf("he.yinyuetai.com/uploads/videos/common/")!=-1){
                 // 音乐台的有重定向，一些播放器不支持
                var headerInfo = httpclient.getHttpHeader(videoUrl,null);
@@ -80,7 +84,7 @@ function fetchVideoUrls(url,videoQuality){
         }
     }
     for(var qname in qualityInfo){
-            logger.info(qname);
+            logger.info(qname+" - "+qualityInfo[qname]);
     }
     var start = false;
     for(var i=0; i < parserInfo.qualitys.length ; i++){
