@@ -170,6 +170,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 				return;
 			}
 			while (isBuffering) {
+				watingStop = true;
 				try {
 					sleep(10);
 				} catch (InterruptedException e) {
@@ -180,6 +181,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			} catch (InterruptedException e) {
 			}
 			bufferedVideoIndex = videoIndex;
+			watingStop = false;
 			synchronized (bufferThread) {
 				bufferThread.notify();
 			}
