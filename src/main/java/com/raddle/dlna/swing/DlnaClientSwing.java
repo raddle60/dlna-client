@@ -1028,6 +1028,9 @@ public class DlnaClientSwing {
 						JOptionPane.showMessageDialog(frame, "请填写视频地址");
 						return;
 					}
+					if (urlText.startsWith("file://")) {
+						urlText = urlText.substring("file://".length());
+					}
 					urlParseTime = null;
 					VideoInfo videoInfo = null;
 					// 网络地址
