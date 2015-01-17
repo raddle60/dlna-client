@@ -171,6 +171,7 @@ public class RemoteHttpProxyHandler extends AbstractHandler {
 			}
 			while (isBuffering) {
 				watingStop = true;
+				bufferThread.interrupt();
 				try {
 					sleep(10);
 				} catch (InterruptedException e) {
